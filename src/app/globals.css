@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+/*
+  Stanza's surface is meant to read like a drafting table: ink-dark ground,
+  hairline rules, brass accents, and numerals in a mono face so measurements
+  line up in columns. Nothing decorative competes with the plan itself.
+*/
+
+@theme {
+  --color-ink-950: #0b0d10;
+  --color-ink-900: #101318;
+  --color-ink-850: #14181e;
+  --color-ink-800: #191e26;
+  --color-ink-750: #1f252e;
+  --color-ink-700: #262d38;
+  --color-ink-600: #333c4a;
+  --color-ink-500: #4a5566;
+  --color-ink-400: #6b7789;
+  --color-ink-300: #8d99ab;
+  --color-ink-200: #b5bfcd;
+  --color-ink-100: #dbe2ec;
+  --color-ink-50: #f2f5f9;
+
+  --color-brass-600: #a97f37;
+  --color-brass-500: #c99a48;
+  --color-brass-400: #dcb066;
+  --color-brass-300: #ecc98f;
+
+  --color-verdigris-500: #4f9d89;
+  --color-verdigris-400: #6bb6a1;
+
+  --color-signal-red: #d9695f;
+  --color-signal-amber: #d9a75f;
+  --color-signal-green: #6fae86;
+  --color-signal-blue: #6f97c4;
+
+  --font-sans: ui-sans-serif, "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui,
+    -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas,
+    monospace;
+
+  --radius-panel: 10px;
+}
+
+:root {
+  color-scheme: dark;
+  --surface: var(--color-ink-900);
+  --surface-raised: var(--color-ink-850);
+  --hairline: color-mix(in srgb, var(--color-ink-500) 40%, transparent);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv05", "ss01";
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Faint drafting grid behind the whole application. */
+.paper-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-ink-600) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-ink-600) 22%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.hairline {
+  border-color: var(--hairline);
+}
+
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--color-ink-850) 88%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-panel);
+  backdrop-filter: blur(14px);
+}
+
+.rule-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
+
+/* Scrollbars that do not shout. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-ink-700);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input[type="range"] {
+  appearance: none;
+  height: 3px;
+  background: var(--color-ink-700);
+  border-radius: 999px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-brass-400);
+  border: 2px solid var(--color-ink-900);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-brass-400);
+  border: 2px solid var(--color-ink-900);
+  cursor: pointer;
+}
+
+@keyframes stanza-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+.sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-brass-400) 22%, transparent),
+    transparent
+  );
+  animation: stanza-sweep 1.6s ease-in-out infinite;
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-plain {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+}
