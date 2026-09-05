@@ -21,6 +21,8 @@ interface SceneProps {
   evaluation: Evaluation;
   ghostLayout: Layout | null;
   inventory: Map<string, InventoryItem>;
+  /** Drop heat maps, pins and problem outlines so the room can be read as a room. */
+  quiet?: boolean;
 }
 
 function DraggablePiece({
@@ -200,10 +202,12 @@ function CameraRig({
   room,
   target,
   controls,
+  quiet,
 }: {
   room: Room;
   target: THREE.Vector3;
   controls: React.RefObject<OrbitControlsImpl | null>;
+  quiet?: boolean;
 }) {
   const { camera } = useThree();
   const framed = useRef<string | null>(null);
@@ -213,11 +217,16 @@ function CameraRig({
     if (framed.current === room.id) return;
     framed.current = room.id;
     const centre = roomCentre(room);
-    camera.position.set(centre.x - centre.span * 0.55, centre.span * 1.05, centre.y + centre.span * 1.15);
-    target.set(centre.x, 0.7, centre.y);
+    if (quiet) {
+      camera.position.set(centre.x, centre.span * 1.45, centre.y + centre.span * 0.72);
+      target.set(centre.x, 0.15, centre.y);
+    } else {
+      camera.position.set(centre.x - centre.span * 0.55, centre.span * 1.05, centre.y + centre.span * 1.15);
+      target.set(centre.x, 0.7, centre.y);
+    }
     camera.lookAt(target);
     controls.current?.target.copy(target);
-  }, [camera, controls, room, target]);
+  }, [camera, controls, quiet, room, target]);
 
   return null;
 }
@@ -337,7 +346,7 @@ function WalkControls({
   return null;
 }
 
-function SceneContents({ room, features, evaluation, ghostLayout, inventory }: SceneProps) {
+function SceneContents({ room, features, evaluation, ghostLayout, inventory, quiet }: SceneProps) {
   const { camera, gl, invalidate } = useThree();
   const overlays = useStudio((s) => s.overlays);
   const selection = useStudio((s) => s.selection);
@@ -496,7 +505,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory }: S
 
   return (
     <>
-      <CameraRig room={room} target={orbitTarget} controls={controls} />
+      <CameraRig room={room} target={orbitTarget} controls={controls} quiet={quiet} />
       <WalkControls enabled={!draggingId} controls={controls} target={orbitTarget} />
       <ambientLight intensity={0.55} />
       <hemisphereLight args={['#cfe0f2', '#20262f', 0.6]} />
@@ -523,15 +532,15 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory }: S
         <meshBasicMaterial color="#0b0d10" />
       </mesh>
 
-      <RoomShell room={room} features={features} showGrid={overlays.grid} />
+      <RoomShell room={room} features={features} showGrid={!quiet && overlays.grid} />
 
       <ClearanceOverlay
         grid={evaluation.grid}
         reachable={evaluation.reachableMask}
-        showClearance={overlays.clearance}
-        showCirculation={overlays.circulation}
+        showClearance={!quiet && overlays.clearance}
+        showCirculation={!quiet && overlays.circulation}
       />
-      {overlays.sunlight && <SunOverlay patches={evaluation.sunPatches} />}
+      {!quiet && overlays.sunlight && <SunOverlay patches={evaluation.sunPatches} />}
       {overlays.doorSwings && <DoorSwings features={features} />}
       {overlays.ghost && ghostLayout && <GhostLayer layout={ghostLayout} inventory={inventory} />}
 
@@ -541,7 +550,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory }: S
           resolved={r}
           selected={selection.includes(r.id)}
           hovered={hovered === r.id}
-          hasProblem={problemIds.has(r.id)}
+          hasProblem={!quiet && problemIds.has(r.id)}
           dragging={draggingId === r.id}
           onPointerDown={onPointerDown}
           onHover={setHovered}
@@ -549,7 +558,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory }: S
         />
       ))}
 
-      {overlays.findings && <FindingPins findings={evaluation.findings} />}
+      {!quiet && overlays.findings && <FindingPins findings={evaluation.findings} />}
 
       {overlays.measurements && selectedResolved && !draggingId && (
         <Dimensions

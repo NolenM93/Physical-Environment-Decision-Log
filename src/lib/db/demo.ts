@@ -61,6 +61,7 @@ function makeItem(
     needsPower: prior.needsPower,
     cordLength: prior.cordLength,
     tags: [],
+    quantityOnHand: 1,
     createdAt,
     ...overrides,
   };

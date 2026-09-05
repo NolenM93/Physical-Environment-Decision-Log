@@ -4,7 +4,17 @@ import { useMemo, useState } from 'react';
 import { Check, Copy, GitBranch, Layers, Pencil, Trash2 } from 'lucide-react';
 import { Badge, Button, EmptyState, Panel, TextInput, cn } from '@/components/ui/primitives';
 import { useStudio } from '@/lib/store/studio';
-import type { Layout } from '@/lib/domain/types';
+import type { Layout, SetupKind } from '@/lib/domain/types';
+
+const SETUP_LABEL: Record<SetupKind, string> = {
+  ceremony: 'Ceremony',
+  cocktail: 'Reception',
+  reception: 'Reception',
+  dinner: 'Dinner',
+  dance: 'Dance',
+  reset: 'Reset',
+  other: 'Setup',
+};
 import { relativeTime } from '@/lib/format';
 
 interface TreeNode {
@@ -38,6 +48,7 @@ export function LayoutRail() {
   const layoutId = useStudio((s) => s.layoutId);
   const compareLayoutId = useStudio((s) => s.compareLayoutId);
   const decisions = useStudio((s) => s.decisions);
+  const event = useStudio((s) => s.events.find((e) => e.id === s.eventId) ?? null);
   const selectLayout = useStudio((s) => s.selectLayout);
   const forkLayout = useStudio((s) => s.forkLayout);
   const renameLayout = useStudio((s) => s.renameLayout);
@@ -52,7 +63,16 @@ export function LayoutRail() {
     () => layouts.filter((l) => l.roomId === roomId),
     [layouts, roomId],
   );
-  const tree = useMemo(() => buildTree(roomLayouts), [roomLayouts]);
+  const tree = useMemo(() => {
+    if (!event) return buildTree(roomLayouts);
+    const setupSet = new Set(event.setupIds);
+    const ordered = event.setupIds
+      .map((id) => roomLayouts.find((l) => l.id === id))
+      .filter((l): l is Layout => Boolean(l))
+      .map((layout) => ({ layout, depth: 0 }));
+    const extras = buildTree(roomLayouts.filter((l) => !setupSet.has(l.id)));
+    return [...ordered, ...extras];
+  }, [roomLayouts, event]);
 
   const verdictOf = (id: string) => {
     const entries = decisions.filter((d) => d.layoutId === id);
@@ -63,7 +83,7 @@ export function LayoutRail() {
     <Panel
       title={
         <span className="flex items-center gap-1.5">
-          <Layers size={12} /> Arrangements
+          <Layers size={12} /> {event ? 'Setups' : 'Arrangements'}
         </span>
       }
       action={
@@ -143,6 +163,9 @@ export function LayoutRail() {
                         >
                           {layout.name}
                         </span>
+                        {layout.setupKind && (
+                          <Badge tone="neutral">{SETUP_LABEL[layout.setupKind]}</Badge>
+                        )}
                         {layout.isCurrent && <Badge tone="brass">live</Badge>}
                         {verdict === 'rejected' && <Badge tone="bad">rejected</Badge>}
                         {verdict === 'adopted' && <Badge tone="good">adopted</Badge>}

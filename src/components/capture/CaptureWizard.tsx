@@ -275,6 +275,7 @@ export function CaptureWizard() {
           cordLength: prior.cordLength,
           tags: [],
           notes: o.provenance.join(' '),
+          quantityOnHand: 1,
           createdAt: now,
         };
       });

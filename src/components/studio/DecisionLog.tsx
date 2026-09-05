@@ -84,6 +84,7 @@ export function DecisionLog({ evaluation }: { evaluation: Evaluation | null }) {
   const projectId = useStudio((s) => s.projectId);
   const compareLayoutId = useStudio((s) => s.compareLayoutId);
   const addDecision = useStudio((s) => s.addDecision);
+  const eventId = useStudio((s) => s.eventId);
   const deleteDecision = useStudio((s) => s.deleteDecision);
   const setVerdict = useStudio((s) => s.setVerdict);
   const selectLayout = useStudio((s) => s.selectLayout);
@@ -111,6 +112,7 @@ export function DecisionLog({ evaluation }: { evaluation: Evaluation | null }) {
       projectId,
       roomId,
       layoutId,
+      eventId: eventId ?? undefined,
       comparedToLayoutId: compareLayoutId ?? undefined,
       verdict,
       title: title.trim() || `Note on ${layoutName(layoutId)}`,

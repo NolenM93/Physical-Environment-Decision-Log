@@ -32,6 +32,7 @@ interface Props {
   evaluation: Evaluation;
   ghostLayout: Layout | null;
   inventory: Map<string, InventoryItem>;
+  simpleHints?: boolean;
 }
 
 type Interaction =
@@ -40,7 +41,7 @@ type Interaction =
   | { kind: 'drag'; itemId: string; grab: Vec2 }
   | { kind: 'rotate'; itemId: string };
 
-export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory }: Props) {
+export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory, simpleHints }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Viewport | null>(null);
@@ -134,13 +135,14 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory 
       reachable: evaluation.reachableMask,
       sunPatches: evaluation.sunPatches,
       ghostItems: overlays.ghost ? ghostItems : undefined,
-      showGrid: overlays.grid,
-      showClearance: overlays.clearance,
-      showCirculation: overlays.circulation,
+      showGrid: simpleHints ? false : overlays.grid,
+      showClearance: simpleHints ? false : overlays.clearance,
+      showCirculation: simpleHints ? false : overlays.circulation,
       showDimensions: overlays.measurements,
       showDoorSwings: overlays.doorSwings,
-      showFindings: overlays.findings,
+      showFindings: simpleHints ? false : overlays.findings,
       showSun: overlays.sunlight,
+      showLabels: !simpleHints,
     });
 
     if (guidesNow.length) {
@@ -398,7 +400,9 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory 
       </div>
 
       <div className="pointer-events-none absolute left-3 top-3 text-[11px] text-ink-500">
-        drag to move · nose handle to rotate · shift to bypass snapping · alt-drag to pan
+        {simpleHints
+          ? 'Drag a piece to move it. The small handle turns it.'
+          : 'drag to move · nose handle to rotate · shift to bypass snapping · alt-drag to pan'}
       </div>
     </div>
   );

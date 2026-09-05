@@ -9,6 +9,7 @@ import { Button, cn } from '@/components/ui/primitives';
 import { TopBar } from '@/components/studio/TopBar';
 import { LayoutRail } from '@/components/studio/LayoutRail';
 import { InventoryPanel } from '@/components/studio/InventoryPanel';
+import { BanquetStudio } from '@/components/studio/BanquetStudio';
 import { Inspector } from '@/components/studio/Inspector';
 import { FindingsPanel, ReadoutStrip } from '@/components/studio/FindingsPanel';
 import { DecisionLog } from '@/components/studio/DecisionLog';
@@ -53,9 +54,19 @@ function StudioInner() {
   const setView = useStudio((s) => s.setView);
   const toggleOverlay = useStudio((s) => s.toggleOverlay);
 
+  const studioMode = useStudio((s) => s.studioMode);
+  const eventId = useStudio((s) => s.eventId);
   const [drawer, setDrawer] = useState<Drawer>('decisions');
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [rightTab, setRightTab] = useState<'inspector' | 'room'>('inspector');
+  const [prevStudioMode, setPrevStudioMode] = useState(studioMode);
+  if (studioMode !== prevStudioMode) {
+    setPrevStudioMode(studioMode);
+    if (studioMode === 'ops' && eventId) {
+      setDrawer('move');
+      setDrawerOpen(true);
+    }
+  }
 
   const evaluation = useEvaluation();
 
@@ -165,6 +176,18 @@ function StudioInner() {
     );
   }
 
+  if (eventId) {
+    return (
+      <BanquetStudio
+        evaluation={evaluation}
+        room={room}
+        features={features}
+        ghostLayout={ghostLayout}
+        inventory={inventoryIndex}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ink-950">
       <TopBar />
@@ -216,7 +239,7 @@ function StudioInner() {
                 [
                   ['decisions', 'Decision log', BookMarked],
                   ['compare', 'Compare', GitCompare],
-                  ['move', 'Move plan', Route],
+                  ['move', eventId ? 'Flip plan' : 'Move plan', Route],
                 ] as const
               ).map(([key, label, Icon]) => (
                 <button

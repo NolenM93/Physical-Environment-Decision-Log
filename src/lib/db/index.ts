@@ -12,6 +12,7 @@
 
 import Dexie, { type Table } from 'dexie';
 import type {
+  BanquetEvent,
   DecisionEntry,
   InventoryItem,
   Layout,
@@ -34,6 +35,7 @@ export class StanzaDatabase extends Dexie {
   features!: Table<RoomFeature, string>;
   layouts!: Table<Layout, string>;
   decisions!: Table<DecisionEntry, string>;
+  events!: Table<BanquetEvent, string>;
   preferences!: Table<Preference, string>;
 
   constructor() {
@@ -57,8 +59,29 @@ export class StanzaDatabase extends Dexie {
         .toCollection()
         .modify((p) => {
           p.utcOffsetMinutes ??= -new Date().getTimezoneOffset();
-        }),
+            }),
     );
+
+    this.version(3)
+      .stores({
+        projects: 'id, name, updatedAt',
+        rooms: 'id, projectId, name',
+        photos: 'id, roomId, projectId, takenAt',
+        items: 'id, projectId, category, label, sku',
+        features: 'id, roomId, kind',
+        layouts: 'id, projectId, roomId, parentId, eventId, updatedAt',
+        decisions: 'id, projectId, roomId, layoutId, eventId, createdAt',
+        events: 'id, projectId, roomId, dateISO, status',
+        preferences: 'key',
+      })
+      .upgrade((tx) =>
+        tx
+          .table<InventoryItem>('items')
+          .toCollection()
+          .modify((item) => {
+            item.quantityOnHand ??= 1;
+          }),
+      );
   }
 }
 
@@ -81,18 +104,19 @@ export async function setPreference(key: string, value: unknown): Promise<void> 
 /** Full project export — the escape hatch that keeps this data yours. */
 export async function exportProject(projectId: string): Promise<Record<string, unknown>> {
   const d = db();
-  const [project, rooms, items, features, layouts, decisions] = await Promise.all([
+  const [project, rooms, items, features, layouts, decisions, events] = await Promise.all([
     d.projects.get(projectId),
     d.rooms.where('projectId').equals(projectId).toArray(),
     d.items.where('projectId').equals(projectId).toArray(),
     d.features.toArray(),
     d.layouts.where('projectId').equals(projectId).toArray(),
     d.decisions.where('projectId').equals(projectId).toArray(),
+    d.events.where('projectId').equals(projectId).toArray(),
   ]);
   const roomIds = new Set(rooms.map((r) => r.id));
   return {
     format: 'stanza.project',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     project,
     rooms,
@@ -100,6 +124,7 @@ export async function exportProject(projectId: string): Promise<Record<string, u
     features: features.filter((f) => roomIds.has(f.roomId)),
     layouts,
     decisions,
+    events,
   };
 }
 
@@ -109,7 +134,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   const roomIds = rooms.map((r) => r.id);
   await d.transaction(
     'rw',
-    [d.projects, d.rooms, d.photos, d.items, d.features, d.layouts, d.decisions],
+    [d.projects, d.rooms, d.photos, d.items, d.features, d.layouts, d.decisions, d.events],
     async () => {
       await d.projects.delete(projectId);
       await d.rooms.where('projectId').equals(projectId).delete();
@@ -117,6 +142,7 @@ export async function deleteProject(projectId: string): Promise<void> {
       await d.items.where('projectId').equals(projectId).delete();
       await d.layouts.where('projectId').equals(projectId).delete();
       await d.decisions.where('projectId').equals(projectId).delete();
+      await d.events.where('projectId').equals(projectId).delete();
       for (const roomId of roomIds) {
         await d.features.where('roomId').equals(roomId).delete();
       }

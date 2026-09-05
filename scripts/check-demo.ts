@@ -10,6 +10,12 @@
 import { evaluateLayout } from '../src/lib/constraints/evaluate';
 import { buildMovePlan } from '../src/lib/constraints/moveplan';
 import { buildDemoContent } from '../src/lib/db/demo';
+import {
+  HARBOR_CEREMONY_ID,
+  HARBOR_DINNER_ID,
+  buildHarborContent,
+} from '../src/lib/db/demo-harbor';
+import { seatedCovers } from '../src/lib/domain/catalog';
 import { localClockToInstant } from '../src/lib/constraints/solar';
 import type { InventoryItem } from '../src/lib/domain/types';
 
@@ -93,3 +99,72 @@ if (blockersInBaseline > 0) {
   process.exit(1);
 }
 console.log('\nOK: baseline is clear of blockers.');
+
+const harbor = buildHarborContent(Date.UTC(2026, 9, 18));
+const harborInv = new Map<string, InventoryItem>(harbor.items.map((i) => [i.id, i]));
+const dinner = harbor.layouts.find((l) => l.id === HARBOR_DINNER_ID)!;
+const ceremony = harbor.layouts.find((l) => l.id === HARBOR_CEREMONY_ID)!;
+const event = harbor.events[0];
+
+const dinnerEval = evaluateLayout({
+  room: harbor.room,
+  features: harbor.features,
+  layout: dinner,
+  inventory: harborInv,
+  latitude: harbor.project.latitude,
+  longitude: harbor.project.longitude,
+  date: localClockToInstant(event.dateISO, 19, harbor.project.utcOffsetMinutes),
+  guestCount: event.guestCount,
+});
+
+const dinnerCovers =
+  dinnerEval.metrics.covers ??
+  seatedCovers(dinner.items.map((p) => harborInv.get(p.itemId)!).filter(Boolean));
+
+console.log(`\n${'='.repeat(72)}`);
+console.log(`Harbor House · ${event.name} · ${dinner.name}`);
+console.log(`  covers ${dinnerCovers}/${event.guestCount}  aisle ${dinnerEval.metrics.aisleM ?? 0} m`);
+for (const r of dinnerEval.readouts) {
+  console.log(`  ${r.label.padEnd(18)} ${r.value.padEnd(10)} (${r.tone})`);
+}
+for (const f of dinnerEval.findings) {
+  console.log(`  [${f.severity.padEnd(7)}] ${f.title}`);
+}
+
+const flip = buildMovePlan({
+  room: harbor.room,
+  features: harbor.features,
+  from: ceremony,
+  to: dinner,
+  inventory: harborInv,
+});
+console.log(
+  `\nFlip ${ceremony.name} -> ${dinner.name}: ${flip.steps.length} steps, ` +
+    `${flip.totalMinutes} min, ${flip.peopleNeeded} people`,
+);
+for (const warning of flip.warnings) {
+  console.log(`  ! ${warning}`);
+}
+
+const deadlock = flip.warnings.some((w) => /ends? up where something else still stands/.test(w));
+const failures: string[] = [];
+if (event.status !== 'issued') failures.push(`event status is ${event.status}, expected issued`);
+if (dinnerCovers < event.guestCount) {
+  failures.push(`issued dinner seats ${dinnerCovers}, need ≥ ${event.guestCount}`);
+}
+if (!(dinnerEval.metrics.aisleM != null && dinnerEval.metrics.aisleM > 0)) {
+  failures.push('no route between openings (aisleM is 0)');
+}
+if (dinnerEval.metrics.collisions > 0) {
+  failures.push(`issued dinner has ${dinnerEval.metrics.collisions} overlapping pieces`);
+}
+if (!Number.isFinite(flip.totalMinutes) || flip.steps.length === 0) {
+  failures.push('flip plan is empty or not finite');
+}
+if (deadlock) failures.push('flip plan has a staging deadlock');
+
+if (failures.length) {
+  console.error(`\nFAIL: Harbor House — ${failures.join('; ')}`);
+  process.exit(1);
+}
+console.log('\nOK: Harbor House dinner seats the guarantee, an exit route exists, flip plan is finite.');

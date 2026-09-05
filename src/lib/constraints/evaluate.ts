@@ -40,6 +40,7 @@ import {
   widestRoute,
 } from './grid';
 import { type SunPatch, computeSunPatches } from './solar';
+import { seatedCovers } from '../domain/catalog';
 
 export type Severity = 'blocker' | 'warning' | 'note';
 
@@ -68,6 +69,8 @@ export interface EvaluationInput {
   /** Shoulder width used for circulation, metres. */
   primaryCorridor?: number;
   secondaryCorridor?: number;
+  /** When set, covers and fire-aisle rules treat this as a banquet setup. */
+  guestCount?: number;
 }
 
 export interface Evaluation {
@@ -95,6 +98,8 @@ const nextId = () => `f${++uid}`;
 const MIN_PRIMARY_CORRIDOR = 0.76; // a comfortable walking route
 const MIN_SECONDARY_CORRIDOR = 0.55; // squeeze-past route
 const BED_ACCESS = 0.6;
+/** Banquet egress target. Not a legal certificate — a house rule of thumb. */
+const BANQUET_FIRE_AISLE = 1.8;
 
 export function evaluateLayout(input: EvaluationInput): Evaluation {
   const {
@@ -107,6 +112,7 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
     date = new Date(),
     primaryCorridor = MIN_PRIMARY_CORRIDOR,
     secondaryCorridor = MIN_SECONDARY_CORRIDOR,
+    guestCount,
   } = input;
 
   const resolved = resolveItems(layout, inventory).filter((r) => r.placed.roomId === room.id);
@@ -528,6 +534,72 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
   const roomAreaM2 = polygonArea(roomPoly);
   const daylightCoverage = roomAreaM2 > 0 ? clamp(litArea / roomAreaM2, 0, 1) : 0;
 
+  // --- 13. Banquet covers and fire aisle --------------------------------
+  const covers = seatedCovers(resolved.map((r) => r.item));
+  const aisleM = tightestCorridor(grid, seeds, secondaryCorridor / 2);
+
+  if (guestCount != null && guestCount > 0) {
+    if (covers < guestCount) {
+      findings.push({
+        id: nextId(),
+        code: 'covers-short',
+        severity: 'blocker',
+        title: `Only ${covers} covers for ${guestCount} guests`,
+        detail: `The seated pieces in this setup add up to ${covers} places. The event is sold at ${guestCount}. Someone is standing, or the count is wrong.`,
+        itemIds: resolved.filter((r) => seatedCovers([r.item]) > 0).map((r) => r.id),
+        featureIds: [],
+        measured: { value: covers, target: guestCount, unit: 'covers', comparison: 'min' },
+      });
+    } else if (covers > guestCount + 12) {
+      findings.push({
+        id: nextId(),
+        code: 'covers-spare',
+        severity: 'note',
+        title: `${covers - guestCount} spare covers`,
+        detail: `The room seats ${covers} against a guarantee of ${guestCount}. Extra tables eat floor and add to the flip.`,
+        itemIds: [],
+        featureIds: [],
+        measured: { value: covers, target: guestCount, unit: 'covers', comparison: 'max' },
+      });
+    }
+
+    if (aisleM > 0 && aisleM < BANQUET_FIRE_AISLE) {
+      findings.push({
+        id: nextId(),
+        code: 'fire-aisle',
+        severity: 'warning',
+        title: `Aisle to an exit is ${(aisleM * 100).toFixed(0)} cm`,
+        detail: `The tightest walk between openings is ${(aisleM * 100).toFixed(0)} cm. House rule of thumb for a banquet is ${BANQUET_FIRE_AISLE} m. This is not a fire-officer certificate.`,
+        itemIds: [],
+        featureIds: doors.map((d) => d.id),
+        measured: { value: aisleM, target: BANQUET_FIRE_AISLE, unit: 'm', comparison: 'min' },
+      });
+    }
+  }
+
+  const egressKinds = new Set(['dance_floor', 'stage']);
+  for (const door of doors) {
+    const zone = doorZone(door);
+    const zoneArea = polygonArea(zone);
+    for (const r of resolved) {
+      if (!egressKinds.has(r.item.category)) continue;
+      const overlap = clipPolygon(obbToPolygon(r.obb), zone);
+      if (overlap.length < 3) continue;
+      const area = polygonArea(overlap);
+      if (zoneArea <= 0 || area / zoneArea < 0.12) continue;
+      findings.push({
+        id: nextId(),
+        code: 'egress-blocked',
+        severity: 'warning',
+        title: `${r.item.label} sits on ${doorLabel(door)}`,
+        detail: `A ${r.item.category.replace(/_/g, ' ')} covers ${Math.round((area / zoneArea) * 100)}% of the swing or opening. Guests cannot use that exit as drawn.`,
+        itemIds: [r.id],
+        featureIds: [door.id],
+        at: r.obb.center,
+      });
+    }
+  }
+
   // --- Metrics ------------------------------------------------------------
   const blockers = findings.filter((f) => f.severity === 'blocker').length;
   const warnings = findings.filter((f) => f.severity === 'warning').length;
@@ -563,6 +635,9 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
     moveEffortMinutes: 0,
     moveEffortPeople: effortSeed > 320 ? 2 : 1,
     usableFloorRatio: Math.round(usableFloorRatio * 1000) / 1000,
+    covers,
+    guestCount,
+    aisleM: Math.round(aisleM * 1000) / 1000,
   };
 
   const readouts = buildReadouts({
@@ -574,7 +649,9 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
     litArea,
     reachableOutlets,
     totalOutletDemands,
-    tightest: tightestCorridor(grid, seeds, secondaryCorridor / 2),
+    tightest: aisleM,
+    covers,
+    guestCount,
   });
 
   findings.sort(
@@ -687,6 +764,8 @@ function buildReadouts(args: {
   reachableOutlets: number;
   totalOutletDemands: number;
   tightest: number;
+  covers: number;
+  guestCount?: number;
 }): Readout[] {
   const {
     roomAreaM2,
@@ -697,7 +776,45 @@ function buildReadouts(args: {
     reachableOutlets,
     totalOutletDemands,
     tightest,
+    covers,
+    guestCount,
   } = args;
+
+  if (guestCount != null && guestCount > 0) {
+    const coverTone: Readout['tone'] =
+      covers >= guestCount && covers <= guestCount + 12 ? 'good' : covers >= guestCount ? 'fair' : 'poor';
+    const aisleTone: Readout['tone'] =
+      tightest >= BANQUET_FIRE_AISLE ? 'good' : tightest >= 1.2 ? 'fair' : 'poor';
+    const readouts: Readout[] = [
+      {
+        label: 'Covers',
+        value: `${covers}/${guestCount}`,
+        hint: 'Seated places against the event guarantee. Tables count at dinner; chairs count at ceremony. Reception is standing.',
+        tone: coverTone,
+      },
+      {
+        label: 'Fire aisle',
+        value: tightest > 0 ? `${(tightest * 100).toFixed(0)} cm` : 'severed',
+        hint: `Tightest walk between openings. House target ${BANQUET_FIRE_AISLE} m — not a legal cert.`,
+        tone: tightest === 0 ? 'poor' : aisleTone,
+      },
+      {
+        label: 'Floor density',
+        value: `${(density * 100).toFixed(0)}%`,
+        hint: 'Footprint over room area. Banquets run tighter than living rooms.',
+        tone: density < 0.45 ? 'good' : density < 0.62 ? 'fair' : 'poor',
+      },
+    ];
+    if (totalOutletDemands > 0) {
+      readouts.push({
+        label: 'Power',
+        value: `${reachableOutlets}/${totalOutletDemands}`,
+        hint: 'Bars, DJ and AV that can reach a socket.',
+        tone: reachableOutlets === totalOutletDemands ? 'good' : 'fair',
+      });
+    }
+    return readouts;
+  }
 
   const readouts: Readout[] = [
     {

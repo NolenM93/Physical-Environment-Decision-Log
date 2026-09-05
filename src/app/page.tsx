@@ -16,30 +16,30 @@ import {
 } from 'lucide-react';
 import { Button, cn } from '@/components/ui/primitives';
 import { db, deleteProject } from '@/lib/db';
-import { seedDemoProject } from '@/lib/db/seed';
+import { seedDemoProject, seedHarborProject } from '@/lib/db/seed';
 import type { Project } from '@/lib/domain/types';
 import { relativeTime } from '@/lib/format';
 
 const PILLARS = [
   {
     icon: Ruler,
-    title: 'Measured, not sketched',
-    body: 'Line segments in your photograph are clustered into vanishing points, the focal length falls out of the orthogonality constraint, and every floor pixel back-projects to real metres. The numbers are derived, not typed in.',
+    title: 'The ballroom, measured',
+    body: 'One function space, in metres. Reception and dinner sit on the same floor so the couple is not choosing from a sketch.',
   },
   {
     icon: Compass,
-    title: 'Constraints, not decoration',
-    body: 'Door swings, walking width, sockets within cord reach, a clear side to get out of bed, viewing angles, where the sun actually lands at four in the afternoon. The things that decide whether a layout survives a week.',
+    title: 'Covers and aisle',
+    body: 'Dinner must seat the guarantee. The walk to the exits is a house rule, not a fire cert. Reception is standing — we do not pretend it is plated.',
   },
   {
     icon: BookMarked,
-    title: 'A log, not a session',
-    body: 'Every arrangement is a branch you can return to, carrying the reasoning and the measurements as they stood when you judged it. The record is the product.',
+    title: 'Why longs lost',
+    body: 'Every rejected dinner stays on the event. Ops can see why the BEO changed without calling sales.',
   },
   {
     icon: Route,
-    title: 'Ends in instructions',
-    body: 'Choose a layout and get an ordered plan: what to shift, in what sequence, how far, how many people, and which piece has to be turned on edge to make it through the gap.',
+    title: 'The Saturday flip',
+    body: 'Reception to dinner is an ordered list: what moves, how long, how many housemen. Print it. Hand it over.',
   },
 ];
 
@@ -69,6 +69,12 @@ export default function LandingPage() {
     router.push(`/studio?project=${id}`);
   };
 
+  const openHarbor = async () => {
+    setBusy(true);
+    const id = await seedHarborProject();
+    router.push(`/studio?project=${id}`);
+  };
+
   return (
     <div className="paper-grid min-h-screen">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6">
@@ -79,7 +85,7 @@ export default function LandingPage() {
             </span>
             <div>
               <div className="text-[15px] font-medium tracking-tight text-ink-50">Stanza</div>
-              <div className="text-[11px] text-ink-500">a spatial decision log</div>
+              <div className="text-[11px] text-ink-500">wedding reception &amp; dinner</div>
             </div>
           </div>
           <nav className="flex items-center gap-2">
@@ -88,6 +94,10 @@ export default function LandingPage() {
                 <Camera size={13} /> Capture a room
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => void openHarbor()} disabled={busy}>
+              {busy ? <Loader2 size={13} className="animate-spin" /> : null}
+              Miller wedding
+            </Button>
             <Button variant="primary" size="sm" onClick={() => void openDemo()} disabled={busy}>
               {busy ? <Loader2 size={13} className="animate-spin" /> : null}
               Open the worked example
@@ -97,25 +107,27 @@ export default function LandingPage() {
 
         <section className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
-            <p className="rule-label mb-4">For the furniture you already own</p>
+            <p className="rule-label mb-4">For the wedding on the books</p>
             <h1 className="text-[40px] font-medium leading-[1.08] tracking-tight text-ink-50 sm:text-[52px]">
-              Move the sofa
+              Design the reception
               <br />
-              <span className="text-brass-400">before you move the sofa.</span>
+              <span className="text-brass-400">and the dinner.</span>
             </h1>
             <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-ink-300">
-              Photograph a room. Stanza reconstructs it to scale from that single image, lets you
-              rearrange what is already in it, and tells you what each arrangement would actually be
-              like to live in — then keeps the record of why you chose what you chose.
+              One measured ballroom. Two setups the couple can walk. Sales locks the sheet; ops
+              gets the flip from reception to dinner without redrawing the room.
             </p>
             <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-ink-500">
-              No catalogue, no shopping, no style transfer. Just your things, measured properly, and
-              the reasoning written down.
+              Covers, aisle, and the written reason the longs lost — same object the housemen
+              carry on Saturday night.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button variant="primary" size="lg" onClick={() => void openDemo()} disabled={busy}>
-                Explore a real room <ArrowRight size={15} />
+              <Button variant="primary" size="lg" onClick={() => void openHarbor()} disabled={busy}>
+                Open the Miller wedding <ArrowRight size={15} />
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => void openDemo()} disabled={busy}>
+                Flat 3B living room
               </Button>
               <Link href="/capture">
                 <Button variant="outline" size="lg">

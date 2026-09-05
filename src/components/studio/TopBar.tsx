@@ -37,6 +37,9 @@ export function TopBar() {
   const dirty = useStudio((s) => s.dirty);
   const layouts = useStudio((s) => s.layouts);
   const layoutId = useStudio((s) => s.layoutId);
+  const event = useStudio((s) => s.events.find((e) => e.id === s.eventId) ?? null);
+  const studioMode = useStudio((s) => s.studioMode);
+  const setStudioMode = useStudio((s) => s.setStudioMode);
 
   const temporal = useTemporal();
   const [overlayMenu, setOverlayMenu] = useState(false);
@@ -70,6 +73,9 @@ export function TopBar() {
           </select>
         ) : (
           <span className="text-[13px] text-ink-500">· {rooms[0]?.name}</span>
+        )}
+        {event && (
+          <span className="truncate text-[13px] text-ink-400">· {event.clientName}</span>
         )}
         {layout && (
           <span className="flex items-center gap-1.5 text-[13px] text-ink-500">
@@ -194,13 +200,29 @@ export function TopBar() {
           <Ruler size={14} />
         </Button>
 
+        {event && (
+          <>
+            <span className="h-5 w-px bg-[color:var(--hairline)]" />
+            <Segmented
+              value={studioMode}
+              onChange={setStudioMode}
+              options={[
+                { value: 'sales', label: 'Sales', title: 'Propose and lock setups' },
+                { value: 'ops', label: 'Ops', title: 'Flip plan and execute' },
+              ]}
+            />
+          </>
+        )}
+
         <span className="h-5 w-px bg-[color:var(--hairline)]" />
 
-        <Link href="/capture">
-          <Button size="sm" variant="primary">
-            <Camera size={13} /> Capture a room
-          </Button>
-        </Link>
+        {!event && (
+          <Link href="/capture">
+            <Button size="sm" variant="primary">
+              <Camera size={13} /> Capture a room
+            </Button>
+          </Link>
+        )}
       </div>
     </header>
   );

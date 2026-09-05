@@ -47,6 +47,16 @@ export type FurnitureCategory =
   | 'island'
   | 'washer_dryer'
   | 'crib'
+  | 'round_table'
+  | 'banquet_table'
+  | 'chiavari'
+  | 'dance_floor'
+  | 'stage'
+  | 'bar'
+  | 'buffet'
+  | 'cake_table'
+  | 'gift_table'
+  | 'lounge_set'
   | 'other';
 
 export type RoomKind =
@@ -59,7 +69,23 @@ export type RoomKind =
   | 'bathroom'
   | 'hallway'
   | 'studio'
+  | 'ballroom'
+  | 'lawn'
+  | 'terrace'
+  | 'chapel'
   | 'other';
+
+export type EventStatus = 'exploring' | 'proposed' | 'approved' | 'issued' | 'executed';
+export type MealStyle = 'plated' | 'buffet' | 'stations' | 'cocktail' | 'ceremony' | 'other';
+export type SetupKind =
+  | 'ceremony'
+  | 'cocktail'
+  | 'reception'
+  | 'dinner'
+  | 'dance'
+  | 'reset'
+  | 'other';
+export type StudioMode = 'sales' | 'ops';
 
 /** How hard the thing is to shift, independent of mass. */
 export type Movability = 'light' | 'moderate' | 'heavy' | 'fixed';
@@ -86,6 +112,15 @@ export interface InventoryItem {
   notes?: string;
   /** Free-form user annotations e.g. "wobbly leg, lift don't drag". */
   tags: string[];
+  /**
+   * House stock-keeping unit. Forty identical 60" rounds share a sku; a named
+   * grand piano does not need one.
+   */
+  sku?: string;
+  /** How many of this sku the house owns. Defaults to 1 for unique pieces. */
+  quantityOnHand: number;
+  /** Seated covers this piece provides, when it differs from the category prior. */
+  covers?: number;
   createdAt: number;
 }
 
@@ -169,11 +204,33 @@ export interface Photo {
 
 export type Verdict = 'adopted' | 'rejected' | 'parked' | 'exploring' | 'implemented';
 
+export interface BanquetEvent {
+  id: string;
+  projectId: string;
+  roomId: string;
+  name: string;
+  clientName: string;
+  dateISO: string;
+  guestCount: number;
+  mealStyle: MealStyle;
+  status: EventStatus;
+  /** Ordered layout ids: ceremony, cocktail, dinner… */
+  setupIds: string[];
+  issuedAt?: number;
+  executedAt?: number;
+  issuedMetrics?: LayoutMetricsSnapshot;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface DecisionEntry {
   id: string;
   projectId: string;
   roomId: string;
   layoutId: string;
+  /** The event this judgement belongs to, when it is a banquet decision. */
+  eventId?: string;
   /** The layout it was weighed against, when the entry records a comparison. */
   comparedToLayoutId?: string;
   verdict: Verdict;
@@ -200,6 +257,9 @@ export interface LayoutMetricsSnapshot {
   moveEffortMinutes: number;
   moveEffortPeople: number;
   usableFloorRatio: number;
+  covers?: number;
+  guestCount?: number;
+  aisleM?: number;
 }
 
 export interface Layout {
@@ -213,6 +273,8 @@ export interface Layout {
   /** True for the arrangement that matches the physical room right now. */
   isCurrent: boolean;
   color: string;
+  eventId?: string;
+  setupKind?: SetupKind;
   createdAt: number;
   updatedAt: number;
 }

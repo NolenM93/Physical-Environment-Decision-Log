@@ -13,13 +13,16 @@ import { temporal } from 'zundo';
 import { nanoid } from 'nanoid';
 import { type Vec2, v2, wrapAngle } from '../geometry/vec';
 import type {
+  BanquetEvent,
   DecisionEntry,
   InventoryItem,
   Layout,
+  LayoutMetricsSnapshot,
   PlacedItem,
   Project,
   Room,
   RoomFeature,
+  StudioMode,
   Verdict,
 } from '../domain/types';
 import { db } from '../db';
@@ -50,6 +53,9 @@ interface StudioState {
   /** The live arrangement being edited. Undo history tracks exactly this. */
   layoutItems: PlacedItem[];
   decisions: DecisionEntry[];
+  events: BanquetEvent[];
+  eventId: string | null;
+  studioMode: StudioMode;
 
   selection: string[];
   hovered: string | null;
@@ -113,6 +119,11 @@ interface StudioState {
   setDateISO: (iso: string) => void;
   setCompare: (layoutId: string | null) => void;
   setSnapEnabled: (on: boolean) => void;
+  setStudioMode: (mode: StudioMode) => void;
+  selectEvent: (eventId: string) => void;
+  updateEvent: (id: string, patch: Partial<BanquetEvent>) => Promise<void>;
+  issueEvent: (metrics?: LayoutMetricsSnapshot) => Promise<void>;
+  executeEvent: () => Promise<void>;
 }
 
 const DEFAULT_OVERLAYS: Overlays = {
@@ -156,6 +167,9 @@ export const useStudio = create<StudioState>()(
         layoutId: null,
         layoutItems: [],
         decisions: [],
+        events: [],
+        eventId: null,
+        studioMode: 'sales',
 
         selection: [],
         hovered: null,
@@ -171,12 +185,13 @@ export const useStudio = create<StudioState>()(
 
         async loadProject(projectId) {
           const d = db();
-          const [project, rooms, inventory, layouts, decisions] = await Promise.all([
+          const [project, rooms, inventory, layouts, decisions, events] = await Promise.all([
             d.projects.get(projectId),
             d.rooms.where('projectId').equals(projectId).toArray(),
             d.items.where('projectId').equals(projectId).toArray(),
             d.layouts.where('projectId').equals(projectId).toArray(),
             d.decisions.where('projectId').equals(projectId).toArray(),
+            d.events.where('projectId').equals(projectId).toArray(),
           ]);
           if (!project) {
             set({ ready: true, projectId: null, project: null });
@@ -186,11 +201,20 @@ export const useStudio = create<StudioState>()(
           const features = room
             ? await d.features.where('roomId').equals(room.id).toArray()
             : [];
+          const event = events[0] ?? null;
           const roomLayouts = layouts.filter((l) => !room || l.roomId === room.id);
+          const fromEvent = event
+            ? [...event.setupIds]
+                .reverse()
+                .map((id) => layouts.find((l) => l.id === id))
+                .find(Boolean)
+            : null;
           const active =
+            fromEvent ??
             roomLayouts.find((l) => l.isCurrent) ??
             [...roomLayouts].sort((a, b) => b.updatedAt - a.updatedAt)[0] ??
             null;
+          const banquet = Boolean(event);
 
           set({
             ready: true,
@@ -202,6 +226,23 @@ export const useStudio = create<StudioState>()(
             inventory,
             layouts,
             decisions,
+            events,
+            eventId: event?.id ?? null,
+            studioMode: 'sales',
+            view: banquet ? 'plan' : 'perspective',
+            overlays: banquet
+              ? {
+                  clearance: false,
+                  circulation: false,
+                  doorSwings: true,
+                  sunlight: false,
+                  measurements: false,
+                  ghost: false,
+                  grid: false,
+                  findings: false,
+                }
+              : get().overlays,
+            dateISO: event?.dateISO ?? get().dateISO,
             layoutId: active?.id ?? null,
             layoutItems: active ? active.items.map((i) => ({ ...i })) : [],
             selection: [],
@@ -401,6 +442,7 @@ export const useStudio = create<StudioState>()(
           const { projectId, roomId, layoutId, layoutItems, layouts } = get();
           if (!projectId || !roomId) return null;
           const now = Date.now();
+          const current = layouts.find((l) => l.id === layoutId);
           const palette = ['#8fa8c8', '#c2a06a', '#7fae94', '#b58ac0', '#cf8f7a', '#7fa7b5'];
           const layout: Layout = {
             id: nanoid(10),
@@ -411,11 +453,24 @@ export const useStudio = create<StudioState>()(
             items: layoutItems.map((i) => ({ ...i })),
             isCurrent: false,
             color: palette[layouts.length % palette.length],
+            eventId: current?.eventId ?? get().eventId ?? undefined,
+            setupKind: current?.setupKind,
             createdAt: now,
             updatedAt: now,
           };
           await db().layouts.put(layout);
-          set((s) => ({ layouts: [...s.layouts, layout], layoutId: layout.id }));
+          const event = get().events.find((e) => e.id === (layout.eventId ?? get().eventId));
+          if (event && current?.setupKind && current.setupKind !== layout.setupKind) {
+            const nextEvent = { ...event, setupIds: [...event.setupIds, layout.id], updatedAt: now };
+            await db().events.put(nextEvent);
+            set((s) => ({
+              layouts: [...s.layouts, layout],
+              layoutId: layout.id,
+              events: s.events.map((e) => (e.id === nextEvent.id ? nextEvent : e)),
+            }));
+          } else {
+            set((s) => ({ layouts: [...s.layouts, layout], layoutId: layout.id }));
+          }
           useStudio.temporal.getState().clear();
           return layout.id;
         },
@@ -433,9 +488,14 @@ export const useStudio = create<StudioState>()(
           await db().decisions.where('layoutId').equals(id).delete();
           const remaining = get().layouts.filter((l) => l.id !== id);
           const nextActive = remaining.find((l) => l.roomId === get().roomId) ?? null;
+          const touchedEvents = get().events
+            .filter((e) => e.setupIds.includes(id))
+            .map((e) => ({ ...e, setupIds: e.setupIds.filter((sid) => sid !== id), updatedAt: Date.now() }));
+          if (touchedEvents.length) await db().events.bulkPut(touchedEvents);
           set((s) => ({
             layouts: remaining,
             decisions: s.decisions.filter((d) => d.layoutId !== id),
+            events: s.events.map((e) => touchedEvents.find((t) => t.id === e.id) ?? e),
             layoutId: s.layoutId === id ? (nextActive?.id ?? null) : s.layoutId,
             layoutItems:
               s.layoutId === id ? (nextActive ? nextActive.items.map((i) => ({ ...i })) : []) : s.layoutItems,
@@ -523,6 +583,100 @@ export const useStudio = create<StudioState>()(
 
         setSnapEnabled(on) {
           set({ snapEnabled: on });
+        },
+
+        setStudioMode(mode) {
+          set({
+            studioMode: mode,
+            view: mode === 'ops' ? 'plan' : get().view,
+          });
+        },
+
+        selectEvent(eventId) {
+          const event = get().events.find((e) => e.id === eventId);
+          if (!event) return;
+          const first = event.setupIds.map((id) => get().layouts.find((l) => l.id === id)).find(Boolean);
+          set({
+            eventId,
+            dateISO: event.dateISO,
+            roomId: event.roomId,
+            layoutId: first?.id ?? get().layoutId,
+            layoutItems: first ? first.items.map((i) => ({ ...i })) : get().layoutItems,
+          });
+          useStudio.temporal.getState().clear();
+        },
+
+        async updateEvent(id, patch) {
+          const existing = get().events.find((e) => e.id === id);
+          if (!existing) return;
+          const next = { ...existing, ...patch, updatedAt: Date.now() };
+          await db().events.put(next);
+          set((s) => ({
+            events: s.events.map((e) => (e.id === id ? next : e)),
+            dateISO: s.eventId === id && next.dateISO ? next.dateISO : s.dateISO,
+          }));
+        },
+
+        async issueEvent(metrics) {
+          const { eventId, layoutId, addDecision, projectId, roomId } = get();
+          const event = get().events.find((e) => e.id === eventId);
+          if (!event || !projectId || !roomId) return;
+          const now = Date.now();
+          const next: BanquetEvent = {
+            ...event,
+            status: 'issued',
+            issuedAt: now,
+            issuedMetrics: metrics,
+            updatedAt: now,
+          };
+          await db().events.put(next);
+          set((s) => ({ events: s.events.map((e) => (e.id === event.id ? next : e)) }));
+          if (layoutId) {
+            await addDecision({
+              projectId,
+              roomId,
+              layoutId,
+              eventId: event.id,
+              verdict: 'adopted',
+              title: `Issued to ops — ${event.name}`,
+              rationale: `Locked for ${event.clientName}, ${event.guestCount} guests on ${event.dateISO}. This is the sheet the crew works from.`,
+              pros: [],
+              cons: [],
+              tags: ['issued', 'beo'],
+              metrics,
+            });
+          }
+        },
+
+        async executeEvent() {
+          const { eventId, layoutId, markCurrent, addDecision, projectId, roomId } = get();
+          const event = get().events.find((e) => e.id === eventId);
+          if (!event || !projectId || !roomId) return;
+          const now = Date.now();
+          const next: BanquetEvent = {
+            ...event,
+            status: 'executed',
+            executedAt: now,
+            updatedAt: now,
+          };
+          await db().events.put(next);
+          set((s) => ({ events: s.events.map((e) => (e.id === event.id ? next : e)) }));
+          if (layoutId) {
+            await markCurrent(layoutId);
+            await addDecision({
+              projectId,
+              roomId,
+              layoutId,
+              eventId: event.id,
+              verdict: 'implemented',
+              title: `Executed — ${event.name}`,
+              rationale: 'House set as drawn. Overnight reset follows this layout until the next issued event.',
+              pros: [],
+              cons: [],
+              tags: ['executed'],
+              implementedAt: now,
+            });
+          }
         },
       };
     },

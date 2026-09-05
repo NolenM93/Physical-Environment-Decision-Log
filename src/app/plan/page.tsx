@@ -18,6 +18,7 @@ import { resolveItems } from '@/lib/domain/scene';
 import { buildMovePlan } from '@/lib/constraints/moveplan';
 import { evaluateLayout } from '@/lib/constraints/evaluate';
 import type {
+  BanquetEvent,
   DecisionEntry,
   InventoryItem,
   Layout,
@@ -35,6 +36,7 @@ interface Loaded {
   target: Layout;
   source: Layout | null;
   decisions: DecisionEntry[];
+  event: BanquetEvent | null;
   printedAt: number;
 }
 
@@ -51,17 +53,27 @@ function PlanSheet() {
       const d = db();
       const target = await d.layouts.get(layoutId);
       if (!target) return;
-      const [project, room, features, items, layouts, decisions] = await Promise.all([
+      const [project, room, features, items, layouts, decisions, events] = await Promise.all([
         d.projects.get(target.projectId),
         d.rooms.get(target.roomId),
         d.features.where('roomId').equals(target.roomId).toArray(),
         d.items.where('projectId').equals(target.projectId).toArray(),
         d.layouts.where('roomId').equals(target.roomId).toArray(),
         d.decisions.where('layoutId').equals(layoutId).toArray(),
+        d.events.where('projectId').equals(target.projectId).toArray(),
       ]);
       if (!project || !room) return;
+      const event =
+        events.find((e) => e.id === target.eventId) ??
+        events.find((e) => e.setupIds.includes(target.id)) ??
+        null;
+      const prevSetup =
+        event && event.setupIds.includes(target.id)
+          ? layouts.find((l) => l.id === event.setupIds[event.setupIds.indexOf(target.id) - 1])
+          : null;
       const source =
         (fromId ? layouts.find((l) => l.id === fromId) : null) ??
+        prevSetup ??
         layouts.find((l) => l.isCurrent) ??
         null;
       setData({
@@ -72,6 +84,7 @@ function PlanSheet() {
         target,
         source: source && source.id !== target.id ? source : null,
         decisions,
+        event,
         printedAt: Date.now(),
       });
     })();
@@ -95,6 +108,12 @@ function PlanSheet() {
 
   const evaluation = useMemo(() => {
     if (!data) return null;
+    const seated =
+      data.target.setupKind === 'cocktail' ||
+      data.target.setupKind === 'reception' ||
+      data.target.setupKind === 'dance'
+        ? undefined
+        : data.event?.guestCount;
     return evaluateLayout({
       room: data.room,
       features: data.features,
@@ -102,6 +121,7 @@ function PlanSheet() {
       inventory: data.inventory,
       latitude: data.project.latitude,
       longitude: data.project.longitude,
+      guestCount: seated,
     });
   }, [data]);
 
@@ -156,14 +176,39 @@ function PlanSheet() {
       <article className="print-plain mx-auto my-6 max-w-[820px] bg-white p-10 text-[#111] shadow-2xl print:my-0 print:shadow-none">
         <header className="mb-6 flex items-baseline justify-between border-b border-[#ddd] pb-3">
           <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">{data.room.name}</h1>
-            <p className="text-[13px] text-[#555]">
-              {data.target.name} · {data.project.name}
-            </p>
+            {data.event ? (
+              <>
+                <p className="text-[10.5px] font-semibold uppercase tracking-widest text-[#888]">
+                  Banquet event order
+                </p>
+                <h1 className="text-[22px] font-semibold tracking-tight">{data.event.name}</h1>
+                <p className="text-[13px] text-[#555]">
+                  {data.event.clientName} · {data.event.guestCount} guests · {data.room.name}
+                </p>
+                <p className="mt-1 text-[12px] text-[#666]">
+                  {data.target.name}
+                  {data.target.setupKind ? ` · ${data.target.setupKind}` : ''} · {data.project.name} ·{' '}
+                  {data.event.dateISO}
+                  {data.event.issuedAt
+                    ? ` · issued ${formatDate(data.event.issuedAt)}`
+                    : ''}
+                  {evaluation?.metrics.covers != null
+                    ? ` · ${evaluation.metrics.covers} covers`
+                    : ''}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-[22px] font-semibold tracking-tight">{data.room.name}</h1>
+                <p className="text-[13px] text-[#555]">
+                  {data.target.name} · {data.project.name}
+                </p>
+              </>
+            )}
           </div>
           <div className="text-right text-[11px] text-[#666]">
             <div>{formatDate(data.printedAt)}</div>
-            <div>Stanza spatial decision log</div>
+            <div>{data.event ? 'Stanza banquet studio' : 'Stanza spatial decision log'}</div>
           </div>
         </header>
 

@@ -209,6 +209,40 @@ function Table({ width, height, depth, color, faded, thickness = 0.05 }: Furnitu
   );
 }
 
+function RoundTable({ width, height, depth, color, faded }: FurnitureProps) {
+  const radius = Math.min(width, depth) / 2;
+  const dark = shade(color, -0.14);
+  const stem = Math.min(0.12, radius * 0.22);
+  return (
+    <group>
+      <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[radius * 0.28, radius * 0.34, 0.08, 20]} />
+        <Mat color={dark} faded={faded} />
+      </mesh>
+      <mesh position={[0, height / 2, 0]} castShadow>
+        <cylinderGeometry args={[stem, stem, height - 0.12, 12]} />
+        <Mat color={dark} faded={faded} />
+      </mesh>
+      <mesh position={[0, height - 0.03, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[radius, radius, 0.05, 36]} />
+        <Mat color={color} faded={faded} />
+      </mesh>
+    </group>
+  );
+}
+
+function Platform({ width, height, depth, color, faded }: FurnitureProps) {
+  return (
+    <Part
+      size={[width, Math.max(0.04, height), depth]}
+      position={[0, Math.max(0.04, height) / 2, 0]}
+      color={color}
+      faded={faded}
+      radius={0.012}
+    />
+  );
+}
+
 function Bed({ width, height, depth, color, faded, crib }: FurnitureProps & { crib?: boolean }) {
   const frameH = Math.min(0.3, height * 0.45);
   const mattressH = Math.min(0.28, height * 0.4);
@@ -509,6 +543,23 @@ export function Furniture(props: FurnitureProps) {
       return <Cabinet {...props} drawers={3} />;
     case 'ottoman':
       return <Part size={[props.width, props.height, props.depth]} position={[0, props.height / 2, 0]} color={props.color} faded={props.faded} radius={0.06} />;
+    case 'round_table':
+    case 'cake_table':
+      return <RoundTable {...props} />;
+    case 'banquet_table':
+    case 'gift_table':
+      return <Table {...props} thickness={0.05} />;
+    case 'chiavari':
+      return <Chair {...props} />;
+    case 'dance_floor':
+      return <Rug {...props} />;
+    case 'stage':
+      return <Platform {...props} />;
+    case 'bar':
+    case 'buffet':
+      return <Cabinet {...props} drawers={2} />;
+    case 'lounge_set':
+      return <Sofa {...props} />;
     default:
       return <Generic {...props} />;
   }

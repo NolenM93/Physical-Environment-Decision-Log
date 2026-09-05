@@ -41,6 +41,8 @@ export interface CategoryPrior {
   fixture?: boolean;
   /** Sits flat on the floor and can be walked over. */
   walkable?: boolean;
+  /** Seated covers this piece typically provides. Tables, not the chairs around them. */
+  covers?: number;
   keywords: string[];
 }
 
@@ -513,6 +515,145 @@ export const CATEGORY_PRIORS: Record<FurnitureCategory, CategoryPrior> = {
     prefersWall: true,
     keywords: ['cot', 'bassinet'],
   }),
+  round_table: P({
+    label: 'Round table',
+    size: [1.52, 0.75, 1.52],
+    widthRange: [0.7, 2.0],
+    heightRange: [0.7, 1.1],
+    depthRatio: 1,
+    densityKgM3: 45,
+    movability: 'moderate',
+    color: '#c4b49a',
+    accessClearance: 0.9,
+    accessSide: 'all',
+    covers: 8,
+    keywords: ['60 inch round', '72 inch round', 'banquet round', 'high-boy', 'highboy'],
+  }),
+  banquet_table: P({
+    label: 'Banquet table',
+    size: [2.44, 0.75, 0.76],
+    widthRange: [1.5, 3.1],
+    heightRange: [0.7, 0.85],
+    depthRatio: 0.31,
+    densityKgM3: 42,
+    movability: 'moderate',
+    color: '#b9a888',
+    accessClearance: 0.85,
+    accessSide: 'long-sides',
+    covers: 8,
+    keywords: ['trestle', '8ft banquet', '6ft banquet', 'head table', 'theatre row'],
+  }),
+  chiavari: P({
+    label: 'Chiavari chair',
+    size: [0.4, 0.92, 0.42],
+    widthRange: [0.35, 0.5],
+    heightRange: [0.85, 1.05],
+    depthRatio: 1.05,
+    densityKgM3: 38,
+    movability: 'light',
+    color: '#d4c4a0',
+    accessClearance: 0.45,
+    accessSide: 'front',
+    isSeating: true,
+    covers: 1,
+    keywords: ['banquet chair', 'gold chair', 'ceremony chair'],
+  }),
+  dance_floor: P({
+    label: 'Dance floor',
+    size: [4.88, 0.04, 4.88],
+    widthRange: [2.4, 9.0],
+    heightRange: [0.02, 0.08],
+    depthRatio: 1,
+    densityKgM3: 180,
+    movability: 'heavy',
+    color: '#6b5344',
+    accessClearance: 0,
+    accessSide: 'none',
+    walkable: true,
+    keywords: ['parquet', 'dancefloor'],
+  }),
+  stage: P({
+    label: 'Stage',
+    size: [4.88, 0.4, 2.44],
+    widthRange: [1.8, 8.0],
+    heightRange: [0.2, 1.0],
+    depthRatio: 0.5,
+    densityKgM3: 90,
+    movability: 'heavy',
+    color: '#4a4450',
+    accessClearance: 1.0,
+    accessSide: 'front',
+    keywords: ['riser', 'platform', 'dais'],
+  }),
+  bar: P({
+    label: 'Bar',
+    size: [2.4, 1.1, 0.7],
+    widthRange: [1.4, 4.0],
+    heightRange: [0.95, 1.25],
+    depthRatio: 0.3,
+    densityKgM3: 70,
+    movability: 'heavy',
+    color: '#3f3530',
+    accessClearance: 1.1,
+    accessSide: 'front',
+    needsPower: true,
+    cordLength: 3,
+    keywords: ['portable bar', 'beverage station'],
+  }),
+  buffet: P({
+    label: 'Buffet',
+    size: [2.44, 0.9, 0.76],
+    widthRange: [1.5, 4.0],
+    heightRange: [0.75, 1.05],
+    depthRatio: 0.32,
+    densityKgM3: 50,
+    movability: 'moderate',
+    color: '#8a7a64',
+    accessClearance: 1.2,
+    accessSide: 'front',
+    keywords: ['service table', 'carving station'],
+  }),
+  cake_table: P({
+    label: 'Cake table',
+    size: [0.9, 0.75, 0.9],
+    widthRange: [0.7, 1.4],
+    heightRange: [0.7, 0.9],
+    depthRatio: 1,
+    densityKgM3: 40,
+    movability: 'light',
+    color: '#e8dcc8',
+    accessClearance: 0.7,
+    accessSide: 'front',
+    keywords: ['cake stand table'],
+  }),
+  gift_table: P({
+    label: 'Gift table',
+    size: [1.5, 0.75, 0.6],
+    widthRange: [0.9, 2.2],
+    heightRange: [0.7, 0.9],
+    depthRatio: 0.4,
+    densityKgM3: 40,
+    movability: 'light',
+    color: '#cfc0a8',
+    accessClearance: 0.7,
+    accessSide: 'front',
+    keywords: ['card table', 'favours'],
+  }),
+  lounge_set: P({
+    label: 'Lounge set',
+    size: [2.2, 0.78, 1.6],
+    widthRange: [1.6, 3.2],
+    heightRange: [0.65, 0.95],
+    depthRatio: 0.72,
+    densityKgM3: 24,
+    movability: 'heavy',
+    color: '#8a7d72',
+    accessClearance: 0.7,
+    accessSide: 'front',
+    isSeating: true,
+    covers: 4,
+    keywords: ['cocktail lounge', 'velvet sofa set'],
+  }),
   other: P({
     label: 'Object',
     size: [0.6, 0.7, 0.6],
@@ -541,8 +682,36 @@ export const ROOM_CATEGORY_HINTS: Record<RoomKind, FurnitureCategory[]> = {
   bathroom: ['storage_bin', 'washer_dryer', 'other'],
   hallway: ['console', 'storage_bin', 'plant', 'bookshelf'],
   studio: ['bed', 'sofa', 'desk', 'dining_table', 'bookshelf', 'rug', 'tv', 'refrigerator'],
+  ballroom: ['round_table', 'banquet_table', 'chiavari', 'dance_floor', 'stage', 'bar', 'buffet', 'cake_table', 'gift_table', 'lounge_set'],
+  lawn: ['round_table', 'chiavari', 'banquet_table', 'bar', 'lounge_set', 'stage'],
+  terrace: ['round_table', 'chiavari', 'bar', 'lounge_set', 'gift_table'],
+  chapel: ['chiavari', 'banquet_table', 'stage', 'gift_table'],
   other: CATEGORY_KEYS,
 };
+
+const TABLE_COVER_CATEGORIES = new Set<FurnitureCategory>([
+  'round_table',
+  'banquet_table',
+  'dining_table',
+]);
+
+/** Seated covers for a piece: inventory override, else the category prior. */
+export function coversFor(item: { category: FurnitureCategory; covers?: number }): number {
+  if (item.covers != null) return item.covers;
+  return priorFor(item.category).covers ?? 0;
+}
+
+/**
+ * Dinner counts tables. Ceremony counts chairs or row units. Mixing both
+ * would double-count a plated dinner that still has chiavari pulled up.
+ */
+export function seatedCovers(
+  items: { category: FurnitureCategory; covers?: number }[],
+): number {
+  const tables = items.filter((i) => TABLE_COVER_CATEGORIES.has(i.category));
+  if (tables.length) return tables.reduce((s, i) => s + coversFor(i), 0);
+  return items.reduce((s, i) => s + coversFor(i), 0);
+}
 
 export function priorFor(category: FurnitureCategory): CategoryPrior {
   return CATEGORY_PRIORS[category] ?? CATEGORY_PRIORS.other;

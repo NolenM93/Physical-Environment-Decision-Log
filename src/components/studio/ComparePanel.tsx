@@ -5,7 +5,8 @@ import { ArrowRight, GitCompare } from 'lucide-react';
 import { Panel, cn } from '@/components/ui/primitives';
 import { useLayoutEvaluation } from '@/lib/hooks/useEvaluation';
 import type { Evaluation } from '@/lib/constraints/evaluate';
-import { useStudio } from '@/lib/store/studio';
+import { buildMovePlan } from '@/lib/constraints/moveplan';
+import { inventoryMap, useStudio } from '@/lib/store/studio';
 
 interface Row {
   label: string;
@@ -23,6 +24,12 @@ export function ComparePanel({ evaluation }: { evaluation: Evaluation | null }) 
   const layoutId = useStudio((s) => s.layoutId);
   const setCompare = useStudio((s) => s.setCompare);
   const roomId = useStudio((s) => s.roomId);
+  const event = useStudio((s) => s.events.find((e) => e.id === s.eventId) ?? null);
+  const banquet = Boolean(event?.guestCount);
+  const room = useStudio((s) => s.rooms.find((r) => r.id === s.roomId) ?? null);
+  const features = useStudio((s) => s.features);
+  const inventory = useStudio((s) => s.inventory);
+  const layoutItems = useStudio((s) => s.layoutItems);
 
   const other = useLayoutEvaluation(compareLayoutId);
   const roomLayouts = layouts.filter((l) => l.roomId === roomId && l.id !== layoutId);
@@ -31,15 +38,65 @@ export function ComparePanel({ evaluation }: { evaluation: Evaluation | null }) 
     if (!evaluation || !other) return [];
     const m = evaluation.metrics;
     const n = other.metrics;
+    const nextId =
+      event && layoutId
+        ? event.setupIds[event.setupIds.indexOf(layoutId) + 1]
+        : undefined;
+    const next = nextId ? layouts.find((l) => l.id === nextId) : undefined;
+    const currentLayout = layouts.find((l) => l.id === layoutId);
+    const otherLayout = layouts.find((l) => l.id === compareLayoutId);
+    let flipA = 0;
+    let flipB = 0;
+    if (banquet && room && next && currentLayout && otherLayout) {
+      const inv = inventoryMap(inventory);
+      const live = { ...currentLayout, items: layoutItems };
+      flipA = buildMovePlan({ room, features, from: live, to: next, inventory: inv }).totalMinutes;
+      flipB = buildMovePlan({ room, features, from: otherLayout, to: next, inventory: inv }).totalMinutes;
+    }
+    const banquetRows: Row[] = banquet
+      ? [
+          {
+            label: 'Covers',
+            a: m.covers ?? 0,
+            b: n.covers ?? 0,
+            format: (v) => String(Math.round(v)),
+            better: 'higher',
+            hint: 'Seated places this setup provides',
+          },
+          {
+            label: 'Fire aisle',
+            a: m.aisleM ?? 0,
+            b: n.aisleM ?? 0,
+            format: (v) => `${Math.round(v * 100)} cm`,
+            better: 'higher',
+            hint: 'Tightest walk between openings',
+          },
+          ...(next
+            ? [
+                {
+                  label: 'Flip to next',
+                  a: flipA,
+                  b: flipB,
+                  format: (v: number) => `${Math.round(v)} min`,
+                  better: 'lower' as const,
+                  hint: `Minutes to reach ${next.name}`,
+                },
+              ]
+            : []),
+        ]
+      : [];
     return [
+      ...banquetRows,
       { label: 'Overall score', a: m.score, b: n.score, format: (v) => String(Math.round(v)), better: 'higher' },
       {
-        label: 'Walkable floor',
-        a: m.usableFloorRatio,
-        b: n.usableFloorRatio,
+        label: banquet ? 'Floor density' : 'Walkable floor',
+        a: banquet ? 1 - m.usableFloorRatio : m.usableFloorRatio,
+        b: banquet ? 1 - n.usableFloorRatio : n.usableFloorRatio,
         format: (v) => `${Math.round(v * 100)}%`,
-        better: 'higher',
-        hint: 'Share of the room you can cross at full walking width',
+        better: banquet ? 'lower' : 'higher',
+        hint: banquet
+          ? 'Occupied footprint over room area'
+          : 'Share of the room you can cross at full walking width',
       },
       { label: 'Overlaps', a: m.collisions, b: n.collisions, format: (v) => String(v), better: 'lower' },
       {
@@ -72,7 +129,19 @@ export function ComparePanel({ evaluation }: { evaluation: Evaluation | null }) 
         better: 'lower',
       },
     ];
-  }, [evaluation, other]);
+  }, [
+    evaluation,
+    other,
+    banquet,
+    event,
+    layoutId,
+    compareLayoutId,
+    layouts,
+    room,
+    features,
+    inventory,
+    layoutItems,
+  ]);
 
   const onlyHere = useMemo(() => {
     if (!evaluation || !other) return [];

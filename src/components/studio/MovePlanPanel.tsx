@@ -26,12 +26,22 @@ export function MovePlanPanel() {
   const inventory = useStudio((s) => s.inventory);
   const features = useStudio((s) => s.features);
   const project = useStudio((s) => s.project);
+  const event = useStudio((s) => s.events.find((e) => e.id === s.eventId) ?? null);
   const room = useStudio((s) => s.rooms.find((r) => r.id === s.roomId) ?? null);
   const setSelection = useStudio((s) => s.setSelection);
 
   const units = project?.unitSystem ?? 'metric';
   const roomLayouts = layouts.filter((l) => l.roomId === roomId);
-  const source = roomLayouts.find((l) => l.isCurrent) ?? roomLayouts[0] ?? null;
+  const source = (() => {
+    if (event && layoutId) {
+      const index = event.setupIds.indexOf(layoutId);
+      if (index > 0) {
+        const prev = layouts.find((l) => l.id === event.setupIds[index - 1]);
+        if (prev) return prev;
+      }
+    }
+    return roomLayouts.find((l) => l.isCurrent) ?? roomLayouts[0] ?? null;
+  })();
 
   const plan = useMemo(() => {
     if (!room || !source || !layoutId) return null;
@@ -54,15 +64,19 @@ export function MovePlanPanel() {
       <Panel
         title={
           <span className="flex items-center gap-1.5">
-            <Route size={12} /> Move plan
+            <Route size={12} /> {event ? 'Flip plan' : 'Move plan'}
           </span>
         }
         className="min-h-0"
       >
         <div className="p-3 text-[12.5px] leading-relaxed text-ink-400">
           {source && layoutId === source.id
-            ? `You are looking at "${source.name}", which is marked as how the room actually is. Open a different arrangement and this becomes an ordered list of what to shift, in what order, and roughly how long it will take.`
-            : 'Mark one arrangement as the live one, then open another to get step-by-step instructions.'}
+            ? event
+              ? `This is the first setup of the day. Open the next one to see what the crew flips.`
+              : `You are looking at "${source.name}", which is marked as how the room actually is. Open a different arrangement and this becomes an ordered list of what to shift, in what order, and roughly how long it will take.`
+            : event
+              ? 'Open a later setup in the sequence to see the flip from the one before it.'
+              : 'Mark one arrangement as the live one, then open another to get step-by-step instructions.'}
         </div>
       </Panel>
     );
@@ -72,7 +86,7 @@ export function MovePlanPanel() {
     <Panel
       title={
         <span className="flex items-center gap-1.5">
-          <Route size={12} /> Move plan
+          <Route size={12} /> {event ? 'Flip plan' : 'Move plan'}
         </span>
       }
       action={

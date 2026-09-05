@@ -47,6 +47,7 @@ export function InventoryPanel() {
       needsPower: prior.needsPower,
       cordLength: prior.cordLength,
       tags: ['added by hand'],
+      quantityOnHand: 1,
       createdAt: Date.now(),
     };
     await addInventoryItem(item);
