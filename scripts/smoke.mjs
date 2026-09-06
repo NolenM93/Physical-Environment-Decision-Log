@@ -60,47 +60,58 @@ console.log('landing');
 await page.goto(BASE, { waitUntil: 'networkidle' });
 await shot('01-landing');
 
-console.log('seeding demo');
-await page.getByRole('button', { name: /explore a real room/i }).first().click();
+console.log('seeding living room');
+await page.getByRole('button', { name: /try a living room/i }).first().click();
 await page.waitForURL(/\/studio/, { timeout: 60_000 });
 await page.waitForTimeout(4000);
-await shot('02-studio-3d');
+await shot('02-studio-plan');
 
 const roomLabel = await page.locator('body').innerText();
-if (!/sun|clearance|blocker|warning|arrangement/i.test(roomLabel)) {
-  problems.push('studio rendered without any recognisable panel text');
+if (!/add furniture|walkway|as it stands|conversation/i.test(roomLabel)) {
+  problems.push('studio rendered without any recognisable room text');
 }
 
-console.log('03-plan');
-await page.locator('button[title="Scaled floor plan"]').first().click();
-await page.waitForTimeout(1500);
-await shot('03-plan');
-
-console.log('04-compare');
-await page.locator('button:has-text("Compare")').first().click();
-await page.waitForTimeout(600);
-await page.locator('button:has-text("Conversation pit")').last().click();
-await page.waitForTimeout(2000);
-await shot('04-compare');
-
-// The move plan runs from the room as it actually is to whichever arrangement
-// is open, so switch to the alternative before looking at it.
-console.log('05-moveplan');
-await page.locator('aside').first().locator('button:has-text("Conversation pit")').first().click();
+console.log('03-other-layout');
+await page.getByRole('button', { name: /conversation pit/i }).first().click();
 await page.waitForTimeout(1200);
-await page.locator('button:has-text("Move plan")').first().click();
-await page.waitForTimeout(2500);
-await shot('05-moveplan');
+await shot('03-other-layout');
 
-console.log('06-photo');
-await page.locator('button[title="Photo match"]').first().click();
-await page.waitForTimeout(1500);
-await shot('06-photo');
+console.log('04-add');
+await page.getByRole('button', { name: /add furniture/i }).first().click();
+await page.waitForTimeout(600);
+await shot('04-add');
+
+console.log('05-3d');
+await page.locator('button[title="Walk the room"]').first().click();
+await page.waitForTimeout(2000);
+await shot('05-3d');
+
+console.log('06-wedding');
+await page.goto(BASE, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: /try a sample wedding/i }).first().click();
+await page.waitForURL(/\/studio/, { timeout: 60_000 });
+await page.waitForTimeout(4000);
+await shot('06-wedding');
+
+const weddingLabel = await page.locator('body').innerText();
+if (!/dinner|reception|ceremony|seats|walkway/i.test(weddingLabel)) {
+  problems.push('wedding studio rendered without setup tabs');
+}
+
+console.log('07-dinner-fix');
+await page.getByRole('button', { name: /^dinner$/i }).first().click();
+await page.waitForTimeout(800);
+const fix = page.getByRole('button', { name: /to fix/i }).first();
+if (await fix.count()) {
+  await fix.click();
+  await page.waitForTimeout(600);
+}
+await shot('07-dinner-fix');
 
 console.log('capture wizard');
 await page.goto(`${BASE}/capture`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
-await shot('07-capture');
+await shot('08-capture');
 
 await browser.close();
 server?.kill();

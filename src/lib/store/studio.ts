@@ -100,6 +100,7 @@ interface StudioState {
 
   createRoom: (room: Room) => Promise<void>;
   updateRoom: (id: string, patch: Partial<Room>) => Promise<void>;
+  reshapeRoom: (footprint: Vec2[], features?: RoomFeature[]) => Promise<void>;
   updateProject: (patch: Partial<Project>) => Promise<void>;
 
   forkLayout: (name: string) => Promise<string | null>;
@@ -184,6 +185,10 @@ export const useStudio = create<StudioState>()(
         dirty: false,
 
         async loadProject(projectId) {
+          if (projectId === 'harbor-house') {
+            const { seedHarborProject } = await import('../db/seed');
+            await seedHarborProject();
+          }
           const d = db();
           const [project, rooms, inventory, layouts, decisions, events] = await Promise.all([
             d.projects.get(projectId),
@@ -214,8 +219,6 @@ export const useStudio = create<StudioState>()(
             roomLayouts.find((l) => l.isCurrent) ??
             [...roomLayouts].sort((a, b) => b.updatedAt - a.updatedAt)[0] ??
             null;
-          const banquet = Boolean(event);
-
           set({
             ready: true,
             projectId,
@@ -229,19 +232,17 @@ export const useStudio = create<StudioState>()(
             events,
             eventId: event?.id ?? null,
             studioMode: 'sales',
-            view: banquet ? 'plan' : 'perspective',
-            overlays: banquet
-              ? {
-                  clearance: false,
-                  circulation: false,
-                  doorSwings: true,
-                  sunlight: false,
-                  measurements: false,
-                  ghost: false,
-                  grid: false,
-                  findings: false,
-                }
-              : get().overlays,
+            view: 'plan',
+            overlays: {
+              clearance: false,
+              circulation: false,
+              doorSwings: true,
+              sunlight: false,
+              measurements: false,
+              ghost: false,
+              grid: false,
+              findings: false,
+            },
             dateISO: event?.dateISO ?? get().dateISO,
             layoutId: active?.id ?? null,
             layoutItems: active ? active.items.map((i) => ({ ...i })) : [],
@@ -428,6 +429,23 @@ export const useStudio = create<StudioState>()(
           const next = { ...existing, ...patch };
           await db().rooms.put(next);
           set((s) => ({ rooms: s.rooms.map((r) => (r.id === id ? next : r)) }));
+        },
+
+        async reshapeRoom(footprint, nextFeatures) {
+          const { roomId, rooms, features } = get();
+          const existing = rooms.find((r) => r.id === roomId);
+          if (!existing || !roomId) return;
+          const room = { ...existing, footprint };
+          await db().rooms.put(room);
+          if (nextFeatures) {
+            await db().features.bulkPut(nextFeatures);
+            set((s) => ({
+              rooms: s.rooms.map((r) => (r.id === roomId ? room : r)),
+              features: nextFeatures,
+            }));
+            return;
+          }
+          set((s) => ({ rooms: s.rooms.map((r) => (r.id === roomId ? room : r)), features }));
         },
 
         async updateProject(patch) {

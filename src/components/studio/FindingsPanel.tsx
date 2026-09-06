@@ -31,7 +31,13 @@ export function ReadoutStrip({ evaluation }: { evaluation: Evaluation | null }) 
   );
 }
 
-export function FindingsPanel({ evaluation }: { evaluation: Evaluation | null }) {
+export function FindingsPanel({
+  evaluation,
+  simple = false,
+}: {
+  evaluation: Evaluation | null;
+  simple?: boolean;
+}) {
   const setSelection = useStudio((s) => s.setSelection);
   const setHovered = useStudio((s) => s.setHovered);
   const [filter, setFilter] = useState<Severity | 'all'>('all');
@@ -42,48 +48,51 @@ export function FindingsPanel({ evaluation }: { evaluation: Evaluation | null })
     return c;
   }, [evaluation]);
 
-  const findings = (evaluation?.findings ?? []).filter(
-    (f) => filter === 'all' || f.severity === filter,
-  );
+  const findings = (evaluation?.findings ?? []).filter((f) => {
+    if (simple) return f.severity !== 'note';
+    return filter === 'all' || f.severity === filter;
+  });
 
   return (
     <Panel
-      title="Checks"
+      title={simple ? undefined : 'Checks'}
       action={
-        <div className="flex items-center gap-1">
-          {(['all', 'blocker', 'warning', 'note'] as const).map((key) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={cn(
-                'rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-wide transition-colors',
-                filter === key ? 'bg-ink-700 text-ink-50' : 'text-ink-500 hover:text-ink-200',
-              )}
-            >
-              {key === 'all'
-                ? 'all'
-                : `${key === 'blocker' ? counts.blocker : key === 'warning' ? counts.warning : counts.note}`}
-              {key !== 'all' && (
-                <span
-                  className={cn(
-                    'ml-1 inline-block h-1.5 w-1.5 rounded-full align-middle',
-                    key === 'blocker' && 'bg-signal-red',
-                    key === 'warning' && 'bg-signal-amber',
-                    key === 'note' && 'bg-signal-blue',
-                  )}
-                />
-              )}
-            </button>
-          ))}
-        </div>
+        simple ? undefined : (
+          <div className="flex items-center gap-1">
+            {(['all', 'blocker', 'warning', 'note'] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={cn(
+                  'rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-wide transition-colors',
+                  filter === key ? 'bg-ink-700 text-ink-50' : 'text-ink-500 hover:text-ink-200',
+                )}
+              >
+                {key === 'all'
+                  ? 'all'
+                  : `${key === 'blocker' ? counts.blocker : key === 'warning' ? counts.warning : counts.note}`}
+                {key !== 'all' && (
+                  <span
+                    className={cn(
+                      'ml-1 inline-block h-1.5 w-1.5 rounded-full align-middle',
+                      key === 'blocker' && 'bg-signal-red',
+                      key === 'warning' && 'bg-signal-amber',
+                      key === 'note' && 'bg-signal-blue',
+                    )}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        )
       }
-      className="min-h-0"
+      className={cn('min-h-0', simple && 'border-0 bg-transparent')}
     >
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {findings.length === 0 && (
-          <div className="px-3 py-6 text-center text-[12.5px] leading-relaxed text-ink-500">
-            {counts.blocker + counts.warning + counts.note === 0
-              ? 'Nothing to flag. Doors open, routes are clear, everything can be reached and plugged in.'
+          <div className="px-3 py-6 text-center text-[13px] leading-relaxed text-ink-500">
+            {counts.blocker + counts.warning === 0
+              ? 'Nothing in the way. Doors open and people can walk through.'
               : 'Nothing at this severity.'}
           </div>
         )}
@@ -111,7 +120,7 @@ export function FindingsPanel({ evaluation }: { evaluation: Evaluation | null })
                 <span className="mt-0.5 block text-[11.5px] leading-relaxed text-ink-400">
                   {f.detail}
                 </span>
-                {f.measured && (
+                {f.measured && !simple && (
                   <span className="tabular mt-1 inline-block text-[10.5px] text-ink-500">
                     {f.measured.value.toFixed(2)} {f.measured.unit} ·{' '}
                     {f.measured.comparison === 'min' ? 'wants at least' : 'wants at most'}{' '}
@@ -124,7 +133,7 @@ export function FindingsPanel({ evaluation }: { evaluation: Evaluation | null })
         })}
       </div>
 
-      {evaluation && (
+      {evaluation && !simple && (
         <footer className="flex items-center gap-2 border-t border-[color:var(--hairline)] px-3 py-2">
           <Badge tone={counts.blocker ? 'bad' : 'good'}>{counts.blocker} blocking</Badge>
           <Badge tone={counts.warning ? 'warn' : 'neutral'}>{counts.warning} warnings</Badge>

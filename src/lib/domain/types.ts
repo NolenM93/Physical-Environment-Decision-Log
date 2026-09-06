@@ -204,6 +204,14 @@ export interface Photo {
 
 export type Verdict = 'adopted' | 'rejected' | 'parked' | 'exploring' | 'implemented';
 
+/** One line on the day's run-of-show. Times are local clock, 24h. */
+export interface BeoSlot {
+  setupId: string;
+  start?: string;
+  end?: string;
+  notes?: string;
+}
+
 export interface BanquetEvent {
   id: string;
   projectId: string;
@@ -220,6 +228,17 @@ export interface BanquetEvent {
   executedAt?: number;
   issuedMetrics?: LayoutMetricsSnapshot;
   notes?: string;
+  /** House reference, e.g. HH-261018-04. */
+  beoNumber?: string;
+  salesperson?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  menu?: string;
+  beverage?: string;
+  av?: string;
+  /** Start/end for each setup on the sheet. */
+  slots?: BeoSlot[];
   createdAt: number;
   updatedAt: number;
 }

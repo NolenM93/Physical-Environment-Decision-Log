@@ -8,7 +8,7 @@
  */
 
 import { DEMO_PROJECT_ID, buildDemoContent } from './demo';
-import { HARBOR_COCKTAIL_ID, HARBOR_PROJECT_ID, buildHarborContent } from './demo-harbor';
+import { HARBOR_COCKTAIL_ID, HARBOR_EVENT_ID, HARBOR_PROJECT_ID, buildHarborContent } from './demo-harbor';
 import { db } from './index';
 
 export { DEMO_PROJECT_ID, HARBOR_PROJECT_ID };
@@ -65,6 +65,23 @@ export async function seedHarborProject(): Promise<string> {
       await d.layouts.update(HARBOR_COCKTAIL_ID, {
         name: 'Reception — lounge',
         setupKind: 'reception',
+      });
+    }
+    const event = await d.events.get(HARBOR_EVENT_ID);
+    if (event && !event.beoNumber) {
+      const fresh = buildHarborContent(Date.now()).events[0];
+      await d.events.put({
+        ...event,
+        beoNumber: fresh.beoNumber,
+        salesperson: fresh.salesperson,
+        contactName: fresh.contactName,
+        contactPhone: fresh.contactPhone,
+        contactEmail: fresh.contactEmail,
+        menu: fresh.menu,
+        beverage: fresh.beverage,
+        av: fresh.av,
+        slots: fresh.slots,
+        notes: event.notes ?? fresh.notes,
       });
     }
     return HARBOR_PROJECT_ID;

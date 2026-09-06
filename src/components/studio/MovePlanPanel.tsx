@@ -18,7 +18,7 @@ const KIND_LABEL: Record<string, string> = {
   remove: 'Take out',
 };
 
-export function MovePlanPanel() {
+export function MovePlanPanel({ simple = false }: { simple?: boolean }) {
   const layouts = useStudio((s) => s.layouts);
   const roomId = useStudio((s) => s.roomId);
   const layoutId = useStudio((s) => s.layoutId);
@@ -63,20 +63,18 @@ export function MovePlanPanel() {
     return (
       <Panel
         title={
-          <span className="flex items-center gap-1.5">
-            <Route size={12} /> {event ? 'Flip plan' : 'Move plan'}
-          </span>
+          simple ? undefined : (
+            <span className="flex items-center gap-1.5">
+              <Route size={12} /> What to move
+            </span>
+          )
         }
-        className="min-h-0"
+        className={cn('min-h-0', simple && 'border-0 bg-transparent')}
       >
-        <div className="p-3 text-[12.5px] leading-relaxed text-ink-400">
+        <div className="p-3 text-[13px] leading-relaxed text-ink-400">
           {source && layoutId === source.id
-            ? event
-              ? `This is the first setup of the day. Open the next one to see what the crew flips.`
-              : `You are looking at "${source.name}", which is marked as how the room actually is. Open a different arrangement and this becomes an ordered list of what to shift, in what order, and roughly how long it will take.`
-            : event
-              ? 'Open a later setup in the sequence to see the flip from the one before it.'
-              : 'Mark one arrangement as the live one, then open another to get step-by-step instructions.'}
+            ? 'This is the first setup. Open the next one to see what to move.'
+            : 'Open a later setup to see the steps from the one before it.'}
         </div>
       </Panel>
     );
@@ -85,9 +83,11 @@ export function MovePlanPanel() {
   return (
     <Panel
       title={
-        <span className="flex items-center gap-1.5">
-          <Route size={12} /> {event ? 'Flip plan' : 'Move plan'}
-        </span>
+        simple ? undefined : (
+          <span className="flex items-center gap-1.5">
+            <Route size={12} /> What to move
+          </span>
+        )
       }
       action={
         <Link href={`/plan?layout=${layoutId}&from=${source?.id ?? ''}`} target="_blank">
@@ -96,7 +96,7 @@ export function MovePlanPanel() {
           </Button>
         </Link>
       }
-      className="min-h-0"
+      className={cn('min-h-0', simple && 'border-0 bg-transparent')}
     >
       <div className="grid grid-cols-2 gap-1.5 p-2 sm:grid-cols-4">
         <Stat label="Time" value={formatDuration(plan.totalMinutes)} hint="Rough, assuming nothing goes wrong" />

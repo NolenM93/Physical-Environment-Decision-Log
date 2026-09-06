@@ -2,7 +2,7 @@
 
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 
 export const cn = (...parts: unknown[]) => twMerge(clsx(parts));
 
@@ -152,6 +152,19 @@ export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInput
       {...props}
       className={cn(
         'h-8 rounded-md border border-[color:var(--hairline)] bg-ink-900 px-2.5 text-[13px] text-ink-100',
+        'placeholder:text-ink-500 focus:border-brass-500 focus:outline-none',
+        className,
+      )}
+    />
+  );
+}
+
+export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={cn(
+        'min-h-[72px] w-full resize-y rounded-md border border-[color:var(--hairline)] bg-ink-900 px-2.5 py-2 text-[13px] text-ink-100',
         'placeholder:text-ink-500 focus:border-brass-500 focus:outline-none',
         className,
       )}

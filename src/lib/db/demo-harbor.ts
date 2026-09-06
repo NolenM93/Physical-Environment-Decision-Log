@@ -345,7 +345,36 @@ export function buildHarborContent(now: number): HarborContent {
     status: 'issued',
     setupIds: [HARBOR_CEREMONY_ID, HARBOR_COCKTAIL_ID, HARBOR_DINNER_ID],
     issuedAt: now - 25 * 60_000,
-    notes: '180 plated. Ceremony, then reception, then dinner and dance.',
+    notes:
+      'No confetti. Cake cutting at 20:30 on the west wall. Overnight reset is house set, not dinner.',
+    beoNumber: 'HH-261018-04',
+    salesperson: 'Priya Shah',
+    contactName: 'Alex Miller',
+    contactPhone: '401-555-0148',
+    contactEmail: 'alex@millers.example',
+    menu: 'Plated autumn menu. Choice of salmon or short rib. Vegetarian squash risotto. Flourless chocolate.',
+    beverage: 'Open bar through reception. Wine service at dinner. Champagne toast before first dance.',
+    av: 'DJ south-east of the dance floor. Two ceremony mics. No uplighting on the harbour windows.',
+    slots: [
+      {
+        setupId: HARBOR_CEREMONY_ID,
+        start: '15:00',
+        end: '15:45',
+        notes: 'Theatre. Processional from the west guest doors.',
+      },
+      {
+        setupId: HARBOR_COCKTAIL_ID,
+        start: '16:00',
+        end: '17:30',
+        notes: 'Standing reception. Bar east, lounge west.',
+      },
+      {
+        setupId: HARBOR_DINNER_ID,
+        start: '18:00',
+        end: '23:00',
+        notes: 'Plated dinner, then dance. First dance after cake.',
+      },
+    ],
     createdAt: now - 5 * 3600_000,
     updatedAt: now - 25 * 60_000,
   };

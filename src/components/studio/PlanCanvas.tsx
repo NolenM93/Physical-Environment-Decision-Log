@@ -25,6 +25,17 @@ import type { InventoryItem, Layout, Room, RoomFeature } from '@/lib/domain/type
 import { resolveItems } from '@/lib/domain/scene';
 import { useStudio } from '@/lib/store/studio';
 import { formatLength } from '@/lib/format';
+import {
+  OPENING_KINDS,
+  insertVertex,
+  isUsableFootprint,
+  moveEdge,
+  moveVertex,
+  nearestEdge,
+  remapFeatures,
+  slideFeature,
+  snapPoint,
+} from '@/lib/geometry/roomEdit';
 
 interface Props {
   room: Room;
@@ -33,15 +44,33 @@ interface Props {
   ghostLayout: Layout | null;
   inventory: Map<string, InventoryItem>;
   simpleHints?: boolean;
+  selectedFeatureId?: string | null;
+  onSelectFeature?: (id: string | null) => void;
+  addingCorner?: boolean;
+  onAddedCorner?: () => void;
 }
 
 type Interaction =
   | { kind: 'none' }
   | { kind: 'pan'; last: Vec2 }
   | { kind: 'drag'; itemId: string; grab: Vec2 }
-  | { kind: 'rotate'; itemId: string };
+  | { kind: 'rotate'; itemId: string }
+  | { kind: 'vertex'; index: number }
+  | { kind: 'edge'; index: number }
+  | { kind: 'door'; id: string };
 
-export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory, simpleHints }: Props) {
+export function PlanCanvas({
+  room,
+  features,
+  evaluation,
+  ghostLayout,
+  inventory,
+  simpleHints,
+  selectedFeatureId,
+  onSelectFeature,
+  addingCorner,
+  onAddedCorner,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<Viewport | null>(null);
@@ -61,6 +90,8 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
   const setSelection = useStudio((s) => s.setSelection);
   const toggleSelection = useStudio((s) => s.toggleSelection);
   const setHovered = useStudio((s) => s.setHovered);
+  const reshapeRoom = useStudio((s) => s.reshapeRoom);
+  const [hoverHandle, setHoverHandle] = useState<'vertex' | 'edge' | 'door' | null>(null);
 
   const units = project?.unitSystem ?? 'metric';
   const interactionRef = useRef<Interaction>(interaction);
@@ -68,10 +99,11 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
   const liveRef = useRef<{ itemId: string; position: Vec2; rotation: number; guides: SnapGuide[] } | null>(
     null,
   );
+  const liveRoomRef = useRef<{ footprint: Vec2[]; features: RoomFeature[] } | null>(null);
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
 
-  // Fit the plan when the container is first measured or the room changes.
+  // Fit once per room. Resizing walls should not yank the camera back.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -86,7 +118,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     const rect = el.getBoundingClientRect();
     setViewport(fitViewport(room.footprint, rect.width, rect.height));
     return () => observer.disconnect();
-  }, [room.footprint]);
+  }, [room.id]);
 
   const ghostItems = ghostLayout ? resolveItems(ghostLayout, inventory) : undefined;
 
@@ -107,6 +139,10 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+    const liveRoom = liveRoomRef.current;
+    const drawRoom = liveRoom ? { ...room, footprint: liveRoom.footprint } : room;
+    const drawFeatures = liveRoom?.features ?? features;
+
     const live = liveRef.current;
     const items = live
       ? evaluation.resolved.map((r) =>
@@ -122,8 +158,8 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     const guidesNow = live?.guides ?? [];
 
     drawPlan(ctx, {
-      room,
-      features,
+      room: drawRoom,
+      features: drawFeatures,
       items,
       theme: STUDIO_THEME,
       viewport: vp,
@@ -138,7 +174,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
       showGrid: simpleHints ? false : overlays.grid,
       showClearance: simpleHints ? false : overlays.clearance,
       showCirculation: simpleHints ? false : overlays.circulation,
-      showDimensions: overlays.measurements,
+      showDimensions: simpleHints ? true : overlays.measurements,
       showDoorSwings: overlays.doorSwings,
       showFindings: simpleHints ? false : overlays.findings,
       showSun: overlays.sunlight,
@@ -181,6 +217,8 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+
+    drawRoomHandles(ctx, vp, drawRoom.footprint, drawFeatures, selectedFeatureId ?? null);
   }, [
     room,
     features,
@@ -190,6 +228,8 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     overlays,
     units,
     ghostItems,
+    simpleHints,
+    selectedFeatureId,
   ]);
 
   useEffect(() => {
@@ -216,13 +256,44 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
       return;
     }
 
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const screen = v2(e.clientX - rect.left, e.clientY - rect.top);
+
+    if (addingCorner) {
+      const hit = nearestEdge(room.footprint, world);
+      const mid = worldToScreen(viewport, hit.point);
+      if (Math.hypot(screen.x - mid.x, screen.y - mid.y) < 28 || hit.dist < 0.35) {
+        const next = insertVertex(room.footprint, hit.index, snapPoint(hit.point, gridSnapM));
+        if (isUsableFootprint(next)) {
+          void reshapeRoom(next, remapFeatures(features, room.footprint, next));
+        }
+        onAddedCorner?.();
+        return;
+      }
+    }
+
+    const roomHit = pickRoomHandle(viewport, room.footprint, features, screen);
+    if (roomHit) {
+      setSelection([]);
+      if (roomHit.kind === 'door') {
+        onSelectFeature?.(roomHit.id);
+        setInteraction({ kind: 'door', id: roomHit.id });
+      } else if (roomHit.kind === 'vertex') {
+        onSelectFeature?.(null);
+        setInteraction({ kind: 'vertex', index: roomHit.index });
+      } else {
+        onSelectFeature?.(null);
+        setInteraction({ kind: 'edge', index: roomHit.index });
+      }
+      return;
+    }
+
     const selected = evaluation.resolved.find((r) => r.id === selection[0]);
     if (selected && !selected.placed.locked) {
-      const canvas = canvasRef.current!;
-      const rect = canvas.getBoundingClientRect();
       const handle = rotateHandlePosition(selected, viewport);
-      const dx = e.clientX - rect.left - handle.x;
-      const dy = e.clientY - rect.top - handle.y;
+      const dx = screen.x - handle.x;
+      const dy = screen.y - handle.y;
       if (Math.hypot(dx, dy) < 12) {
         setInteraction({ kind: 'rotate', itemId: selected.id });
         return;
@@ -232,10 +303,12 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     const hit = pickItem(evaluation.resolved, world);
     if (!hit) {
       setSelection([]);
+      onSelectFeature?.(null);
       setInteraction({ kind: 'pan', last: v2(e.clientX, e.clientY) });
       return;
     }
 
+    onSelectFeature?.(null);
     toggleSelection(hit.id, e.shiftKey);
     if (!hit.placed.locked) {
       setInteraction({
@@ -252,8 +325,44 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     setCursorWorld(world);
 
     if (interaction.kind === 'none') {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const roomHit = pickRoomHandle(
+          viewport,
+          room.footprint,
+          features,
+          v2(e.clientX - rect.left, e.clientY - rect.top),
+        );
+        setHoverHandle(roomHit ? roomHit.kind : null);
+        if (roomHit) {
+          setHovered(null);
+          return;
+        }
+      }
       const hit = pickItem(evaluation.resolved, world);
       setHovered(hit?.id ?? null);
+      return;
+    }
+
+    if (interaction.kind === 'vertex' || interaction.kind === 'edge' || interaction.kind === 'door') {
+      const step = snapEnabled && !e.shiftKey ? gridSnapM : 0;
+      const nextFoot =
+        interaction.kind === 'vertex'
+          ? moveVertex(room.footprint, interaction.index, snapPoint(world, step))
+          : interaction.kind === 'edge'
+            ? moveEdge(room.footprint, interaction.index, snapPoint(world, step))
+            : room.footprint;
+      const nextFeatures =
+        interaction.kind === 'door'
+          ? features.map((f) => {
+              if (f.id !== interaction.id) return f;
+              const slid = slideFeature(room.footprint, f, world);
+              return { ...f, position: slid.position, facing: slid.facing };
+            })
+          : remapFeatures(features, room.footprint, nextFoot);
+      liveRoomRef.current = { footprint: nextFoot, features: nextFeatures };
+      paint();
       return;
     }
 
@@ -332,6 +441,13 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
         setGuides(snapped.guides);
       }
     }
+    if (session.kind === 'vertex' || session.kind === 'edge' || session.kind === 'door') {
+      const live = liveRoomRef.current;
+      if (live && (session.kind === 'door' || isUsableFootprint(live.footprint))) {
+        void reshapeRoom(live.footprint, live.features);
+      }
+      liveRoomRef.current = null;
+    }
     liveRef.current = null;
     setInteraction({ kind: 'none' });
   };
@@ -357,7 +473,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     });
   };
 
-  const selected = evaluation.resolved.find((r) => r.id === selection[0]);
+  const selected = simpleHints ? null : evaluation.resolved.find((r) => r.id === selection[0]);
 
   return (
     <div ref={wrapRef} className="relative h-full w-full overflow-hidden bg-[#0d1015]">
@@ -368,9 +484,15 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
             ? 'cursor-grabbing'
             : interaction.kind === 'rotate'
               ? 'cursor-alias'
-              : hovered
-                ? 'cursor-move'
-                : 'cursor-default'
+              : interaction.kind === 'vertex' || interaction.kind === 'edge' || hoverHandle === 'vertex' || hoverHandle === 'edge'
+                ? 'cursor-grab'
+                : interaction.kind === 'door' || hoverHandle === 'door'
+                  ? 'cursor-grab'
+                  : hovered
+                    ? 'cursor-move'
+                    : addingCorner
+                      ? 'cursor-crosshair'
+                      : 'cursor-default'
         }
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -384,26 +506,104 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      <div className="pointer-events-none absolute bottom-3 right-3 flex flex-col items-end gap-1 text-[11px]">
-        {cursorWorld && (
-          <span className="tabular rounded bg-ink-900/85 px-2 py-1 text-ink-400">
-            {formatLength(cursorWorld.x, units)}, {formatLength(cursorWorld.y, units)}
-          </span>
-        )}
-        {selected && (
-          <span className="tabular rounded bg-ink-900/85 px-2 py-1 text-brass-300">
-            {selected.item.label} · {formatLength(selected.size.x, units)} ×{' '}
-            {formatLength(selected.size.z, units)} ·{' '}
-            {Math.round(((selected.placed.rotation * 180) / Math.PI + 360) % 360)}°
-          </span>
-        )}
-      </div>
+      {!simpleHints && (
+        <div className="pointer-events-none absolute bottom-3 right-3 flex flex-col items-end gap-1 text-[11px]">
+          {cursorWorld && (
+            <span className="tabular rounded bg-ink-900/85 px-2 py-1 text-ink-400">
+              {formatLength(cursorWorld.x, units)}, {formatLength(cursorWorld.y, units)}
+            </span>
+          )}
+          {selected && (
+            <span className="tabular rounded bg-ink-900/85 px-2 py-1 text-brass-300">
+              {selected.item.label} · {formatLength(selected.size.x, units)} ×{' '}
+              {formatLength(selected.size.z, units)} ·{' '}
+              {Math.round(((selected.placed.rotation * 180) / Math.PI + 360) % 360)}°
+            </span>
+          )}
+        </div>
+      )}
 
-      <div className="pointer-events-none absolute left-3 top-3 text-[11px] text-ink-500">
-        {simpleHints
-          ? 'Drag a piece to move it. The small handle turns it.'
-          : 'drag to move · nose handle to rotate · shift to bypass snapping · alt-drag to pan'}
+      <div className="pointer-events-none absolute left-4 top-4 text-[12px] text-ink-500">
+        {addingCorner
+          ? 'Click a wall to add a corner.'
+          : simpleHints
+            ? 'Drag furniture, corners, or doors. The dots on the walls move the room.'
+            : 'drag to move · nose handle to rotate · shift to bypass snapping · alt-drag to pan'}
       </div>
     </div>
   );
+}
+
+type RoomHandle =
+  | { kind: 'vertex'; index: number }
+  | { kind: 'edge'; index: number }
+  | { kind: 'door'; id: string };
+
+function drawRoomHandles(
+  ctx: CanvasRenderingContext2D,
+  vp: Viewport,
+  footprint: Vec2[],
+  features: RoomFeature[],
+  selectedFeatureId: string | null,
+) {
+  ctx.save();
+  for (let i = 0; i < footprint.length; i++) {
+    const a = footprint[i];
+    const b = footprint[(i + 1) % footprint.length];
+    const mid = worldToScreen(vp, v2((a.x + b.x) / 2, (a.y + b.y) / 2));
+    ctx.beginPath();
+    ctx.arc(mid.x, mid.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d1015';
+    ctx.fill();
+    ctx.strokeStyle = '#6bb6a1';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  for (const p of footprint) {
+    const s = worldToScreen(vp, p);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#dcb066';
+    ctx.fill();
+    ctx.strokeStyle = '#0d1015';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  for (const f of features) {
+    if (!OPENING_KINDS.has(f.kind)) continue;
+    const s = worldToScreen(vp, f.position);
+    const selected = f.id === selectedFeatureId;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, selected ? 8 : 6, 0, Math.PI * 2);
+    ctx.fillStyle = selected ? '#dcb066' : '#0d1015';
+    ctx.fill();
+    ctx.strokeStyle = '#dcb066';
+    ctx.lineWidth = selected ? 2.5 : 2;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function pickRoomHandle(
+  vp: Viewport,
+  footprint: Vec2[],
+  features: RoomFeature[],
+  screen: Vec2,
+): RoomHandle | null {
+  for (const f of features) {
+    if (!OPENING_KINDS.has(f.kind)) continue;
+    const s = worldToScreen(vp, f.position);
+    if (Math.hypot(screen.x - s.x, screen.y - s.y) <= 12) return { kind: 'door', id: f.id };
+  }
+  for (let i = 0; i < footprint.length; i++) {
+    const s = worldToScreen(vp, footprint[i]);
+    if (Math.hypot(screen.x - s.x, screen.y - s.y) <= 12) return { kind: 'vertex', index: i };
+  }
+  for (let i = 0; i < footprint.length; i++) {
+    const a = footprint[i];
+    const b = footprint[(i + 1) % footprint.length];
+    const mid = worldToScreen(vp, v2((a.x + b.x) / 2, (a.y + b.y) / 2));
+    if (Math.hypot(screen.x - mid.x, screen.y - mid.y) <= 11) return { kind: 'edge', index: i };
+  }
+  return null;
 }
