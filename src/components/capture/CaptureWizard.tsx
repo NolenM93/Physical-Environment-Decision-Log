@@ -193,7 +193,8 @@ export function CaptureWizard() {
     setDetectError(null);
     try {
       const dataUrl = await downscaleToDataUrl(file, 1280);
-      const response = await fetch('/api/detect', {
+      const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+      const response = await fetch(`${prefix}/api/detect`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ image: dataUrl }),
