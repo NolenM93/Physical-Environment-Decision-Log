@@ -1,52 +1,49 @@
 @import "tailwindcss";
 
 /*
-  Stanza's surface is meant to read like a drafting table: ink-dark ground,
-  hairline rules, brass accents, and numerals in a mono face so measurements
-  line up in columns. Nothing decorative competes with the plan itself.
+  A historic Adirondack hotel desk at lamplight: warm stone, navy ink, antique brass.
 */
 
 @theme {
-  --color-ink-950: #0b0d10;
-  --color-ink-900: #101318;
-  --color-ink-850: #14181e;
-  --color-ink-800: #191e26;
-  --color-ink-750: #1f252e;
-  --color-ink-700: #262d38;
-  --color-ink-600: #333c4a;
-  --color-ink-500: #4a5566;
-  --color-ink-400: #6b7789;
-  --color-ink-300: #8d99ab;
-  --color-ink-200: #b5bfcd;
-  --color-ink-100: #dbe2ec;
-  --color-ink-50: #f2f5f9;
+  --color-ink-950: #c3b9ab;
+  --color-ink-900: #b9afa2;
+  --color-ink-850: #b0a696;
+  --color-ink-800: #a69c8d;
+  --color-ink-750: #9a9082;
+  --color-ink-700: #b8ad98;
+  --color-ink-600: #9a8f7c;
+  --color-ink-500: #6f675c;
+  --color-ink-400: #524c44;
+  --color-ink-300: #3a362f;
+  --color-ink-200: #2a2722;
+  --color-ink-100: #1c2438;
+  --color-ink-50: #152036;
 
-  --color-brass-600: #a97f37;
-  --color-brass-500: #c99a48;
-  --color-brass-400: #dcb066;
-  --color-brass-300: #ecc98f;
+  --color-brass-600: #6f5528;
+  --color-brass-500: #8d6e38;
+  --color-brass-400: #a4844a;
+  --color-brass-300: #c4a56e;
 
-  --color-verdigris-500: #4f9d89;
-  --color-verdigris-400: #6bb6a1;
+  --color-verdigris-500: #3f6b56;
+  --color-verdigris-400: #4f7d64;
 
-  --color-signal-red: #d9695f;
-  --color-signal-amber: #d9a75f;
-  --color-signal-green: #6fae86;
-  --color-signal-blue: #6f97c4;
+  --color-signal-red: #a33d36;
+  --color-signal-amber: #9a6f28;
+  --color-signal-green: #3d6e52;
+  --color-signal-blue: #3d5a78;
 
-  --font-sans: ui-sans-serif, "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui,
-    -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas,
-    monospace;
+  --font-sans: var(--font-source), "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-cormorant), "Cormorant Garamond", "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
 
-  --radius-panel: 10px;
+  --radius-panel: 12px;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --surface: var(--color-ink-900);
-  --surface-raised: var(--color-ink-850);
-  --hairline: color-mix(in srgb, var(--color-ink-500) 40%, transparent);
+  --surface-raised: #d4cbbd;
+  --hairline: color-mix(in srgb, var(--color-ink-50) 18%, transparent);
 }
 
 html,
@@ -58,17 +55,15 @@ body {
   background: var(--color-ink-950);
   color: var(--color-ink-100);
   font-family: var(--font-sans);
-  font-feature-settings: "cv05", "ss01";
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
-/* Faint drafting grid behind the whole application. */
 .paper-grid {
+  background-color: var(--color-ink-950);
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--color-ink-600) 22%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--color-ink-600) 22%, transparent) 1px, transparent 1px);
-  background-size: 28px 28px;
+    radial-gradient(ellipse 70% 36% at 50% -8%, color-mix(in srgb, var(--color-brass-400) 16%, transparent), transparent 55%);
 }
 
 .hairline {
@@ -82,20 +77,186 @@ body {
 }
 
 .panel {
-  background: color-mix(in srgb, var(--color-ink-850) 88%, transparent);
+  background: var(--surface-raised);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-panel);
-  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-ink-50) 6%, transparent);
 }
 
 .rule-label {
+  font-family: var(--font-sans);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  color: var(--color-brass-500);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-ink-50);
+  color: var(--color-ink-950);
+  font-family: var(--font-display);
+  font-weight: 600;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.hud-viewport {
+  position: relative;
+  isolation: isolate;
+}
+
+.hud-corner {
+  display: block;
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 6;
+  border-color: color-mix(in srgb, var(--color-brass-500) 55%, transparent);
+}
+.hud-corner.tl {
+  top: 10px;
+  left: 10px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+.hud-corner.tr {
+  top: 10px;
+  right: 10px;
+  border-top: 1px solid;
+  border-right: 1px solid;
+}
+.hud-corner.bl {
+  bottom: 10px;
+  left: 10px;
+  border-bottom: 1px solid;
+  border-left: 1px solid;
+}
+.hud-corner.br {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.hud-caption {
+  pointer-events: none;
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 6;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brass-500);
+}
+
+.meter-track {
+  height: 6px;
+  overflow: hidden;
+  background: var(--color-ink-800);
+  border-radius: 999px;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--color-verdigris-500);
+  transition: width 280ms ease;
+}
+
+.meter-fill.warn {
+  background: var(--color-brass-500);
+}
+
+.meter-fill.bad {
+  background: var(--color-signal-red);
+}
+
+.keycap {
+  display: inline-flex;
+  min-width: 1.05rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--color-ink-850);
+  font-family: var(--font-mono);
+  font-size: 10px;
   color: var(--color-ink-400);
 }
 
-/* Scrollbars that do not shout. */
+.hotbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-ink-400);
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 120ms, background 120ms, border-color 120ms;
+}
+
+.hotbar-btn:hover {
+  color: var(--color-ink-50);
+  background: var(--color-ink-850);
+}
+
+.hotbar-btn.on {
+  color: var(--color-ink-50);
+  background: #d4cbbd;
+  border-color: var(--hairline);
+}
+
+.hotbar-btn.on .keycap {
+  background: var(--color-ink-50);
+  color: var(--color-ink-950);
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  background: #d4cbbd;
+  border-radius: 8px;
+}
+
+.campaign-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--hairline);
+  background: #d4cbbd;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.campaign-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-brass-500) 45%, transparent);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-ink-50);
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-ink-700) transparent;
@@ -105,7 +266,7 @@ body {
   height: 9px;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--color-ink-700);
+  background: var(--color-ink-750);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -117,7 +278,7 @@ body {
 input[type="range"] {
   appearance: none;
   height: 3px;
-  background: var(--color-ink-700);
+  background: var(--color-ink-800);
   border-radius: 999px;
   outline: none;
 }
@@ -126,16 +287,16 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: var(--color-brass-400);
-  border: 2px solid var(--color-ink-900);
+  background: var(--color-brass-500);
+  border: 2px solid var(--color-ink-950);
   cursor: pointer;
 }
 input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: var(--color-brass-400);
-  border: 2px solid var(--color-ink-900);
+  background: var(--color-brass-500);
+  border: 2px solid var(--color-ink-950);
   cursor: pointer;
 }
 
@@ -154,7 +315,7 @@ input[type="range"]::-moz-range-thumb {
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--color-brass-400) 22%, transparent),
+    color-mix(in srgb, var(--color-brass-400) 35%, transparent),
     transparent
   );
   animation: stanza-sweep 1.6s ease-in-out infinite;
@@ -172,5 +333,6 @@ input[type="range"]::-moz-range-thumb {
     background: #fff !important;
     color: #000 !important;
     border-color: #999 !important;
+    box-shadow: none !important;
   }
 }

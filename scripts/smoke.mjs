@@ -61,13 +61,13 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await shot('01-landing');
 
 console.log('seeding demo');
-await page.getByRole('button', { name: /explore a real room/i }).first().click();
+await page.getByRole('button', { name: /Flat 3B/i }).first().click();
 await page.waitForURL(/\/studio/, { timeout: 60_000 });
 await page.waitForTimeout(4000);
 await shot('02-studio-3d');
 
 const roomLabel = await page.locator('body').innerText();
-if (!/sun|clearance|blocker|warning|arrangement/i.test(roomLabel)) {
+if (!/sun|clearance|blocker|warning|arrangement|your things/i.test(roomLabel)) {
   problems.push('studio rendered without any recognisable panel text');
 }
 

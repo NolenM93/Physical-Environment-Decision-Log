@@ -19,17 +19,18 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors select-none',
+        'inline-flex items-center justify-center gap-2 rounded-md font-medium select-none',
+        'transition-colors duration-150',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-400',
         'disabled:opacity-40 disabled:pointer-events-none',
-        size === 'sm' && 'h-7 px-2.5 text-[12px]',
+        size === 'sm' && 'h-8 px-2.5 text-[12px]',
         size === 'md' && 'h-9 px-3.5 text-[13px]',
-        size === 'lg' && 'h-11 px-5 text-[14px]',
-        variant === 'primary' && 'bg-brass-500 text-ink-950 hover:bg-brass-400',
-        variant === 'ghost' && 'text-ink-200 hover:bg-ink-800 hover:text-ink-50',
-        variant === 'subtle' && 'bg-ink-800 text-ink-100 hover:bg-ink-750',
+        size === 'lg' && 'h-11 px-5 text-[15px]',
+        variant === 'primary' && 'bg-ink-50 text-ink-950 hover:bg-ink-100',
+        variant === 'ghost' && 'text-ink-200 hover:bg-ink-850 hover:text-ink-50',
+        variant === 'subtle' && 'bg-ink-850 text-ink-100 hover:bg-ink-800',
         variant === 'outline' &&
-          'border border-[color:var(--hairline)] text-ink-200 hover:bg-ink-800 hover:text-ink-50',
+          'border border-[color:var(--hairline)] text-ink-200 hover:bg-ink-900 hover:text-ink-50',
         variant === 'danger' && 'bg-signal-red/15 text-signal-red hover:bg-signal-red/25',
         className,
       )}
@@ -73,7 +74,12 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cn('inline-flex rounded-md bg-ink-850 p-0.5 border border-[color:var(--hairline)]', className)}>
+    <div
+      className={cn(
+        'inline-flex rounded-md bg-ink-950/80 p-0.5 border border-[color:var(--hairline)]',
+        className,
+      )}
+    >
       {options.map((o) => (
         <button
           key={o.value}
@@ -81,7 +87,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             'px-2.5 h-7 rounded text-[12px] font-medium transition-colors',
-            value === o.value ? 'bg-ink-700 text-ink-50' : 'text-ink-400 hover:text-ink-100',
+            value === o.value ? 'bg-ink-50 text-ink-950' : 'text-ink-400 hover:text-ink-100',
           )}
         >
           {o.label}
@@ -151,8 +157,8 @@ export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInput
     <input
       {...props}
       className={cn(
-        'h-8 rounded-md border border-[color:var(--hairline)] bg-ink-900 px-2.5 text-[13px] text-ink-100',
-        'placeholder:text-ink-500 focus:border-brass-500 focus:outline-none',
+        'h-8 rounded-md border border-[color:var(--hairline)] bg-ink-950 px-2.5 text-[13px] text-ink-100',
+        'placeholder:text-ink-500 focus:border-brass-400 focus:outline-none',
         className,
       )}
     />
@@ -184,8 +190,8 @@ export function NumberInput({
           if (!Number.isNaN(n)) onChange(n);
         }}
         className={cn(
-          'tabular h-8 w-full rounded-md border border-[color:var(--hairline)] bg-ink-900 px-2.5 text-[13px] text-ink-100',
-          'focus:border-brass-500 focus:outline-none',
+          'tabular h-8 w-full rounded-md border border-[color:var(--hairline)] bg-ink-950 px-2.5 text-[13px] text-ink-100',
+          'focus:border-brass-400 focus:outline-none',
           suffix && 'pr-8',
         )}
       />
@@ -236,11 +242,14 @@ export function Stat({
   tone?: 'good' | 'fair' | 'poor' | 'neutral';
 }) {
   return (
-    <div className="rounded-md border border-[color:var(--hairline)] bg-ink-900/60 px-2.5 py-2" title={hint}>
+    <div
+      className="rounded-md border border-[color:var(--hairline)] bg-ink-950/70 px-2.5 py-2"
+      title={hint}
+    >
       <div className="rule-label truncate">{label}</div>
       <div
         className={cn(
-          'tabular mt-0.5 text-[15px] font-medium',
+          'tabular mt-0.5 text-[16px] font-medium',
           tone === 'good' && 'text-signal-green',
           tone === 'fair' && 'text-signal-amber',
           tone === 'poor' && 'text-signal-red',
@@ -265,8 +274,8 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center">
-      {icon && <div className="text-ink-600">{icon}</div>}
-      <div className="text-[13px] font-medium text-ink-200">{title}</div>
+      {icon && <div className="text-brass-600">{icon}</div>}
+      <div className="font-display text-[16px] text-ink-100">{title}</div>
       {children && <div className="max-w-xs text-[12px] leading-relaxed text-ink-500">{children}</div>}
     </div>
   );

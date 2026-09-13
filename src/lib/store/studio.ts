@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { temporal } from 'zundo';
 import { nanoid } from 'nanoid';
 import { type Vec2, v2, wrapAngle } from '../geometry/vec';
+import { aabbSize, rectFootprint, snapToNearestWall } from '../geometry/shapes';
 import type {
   BanquetEvent,
   DecisionEntry,
@@ -100,6 +101,7 @@ interface StudioState {
 
   createRoom: (room: Room) => Promise<void>;
   updateRoom: (id: string, patch: Partial<Room>) => Promise<void>;
+  resizeRoom: (id: string, width: number, depth: number) => Promise<void>;
   updateProject: (patch: Partial<Project>) => Promise<void>;
 
   forkLayout: (name: string) => Promise<string | null>;
@@ -428,6 +430,47 @@ export const useStudio = create<StudioState>()(
           const next = { ...existing, ...patch };
           await db().rooms.put(next);
           set((s) => ({ rooms: s.rooms.map((r) => (r.id === id ? next : r)) }));
+        },
+
+        async resizeRoom(id, width, depth) {
+          const existing = get().rooms.find((r) => r.id === id);
+          if (!existing) return;
+          const nextWidth = Math.min(80, Math.max(2, width));
+          const nextDepth = Math.min(80, Math.max(2, depth));
+          const prev = aabbSize(existing.footprint);
+          const sx = prev.width > 1e-6 ? nextWidth / prev.width : 1;
+          const sy = prev.depth > 1e-6 ? nextDepth / prev.depth : 1;
+          const footprint = rectFootprint(nextWidth, nextDepth);
+          const room = { ...existing, footprint };
+          const features = get().features.map((f) => {
+            if (f.roomId !== id) return f;
+            const posed = snapToNearestWall(footprint, v2(f.position.x * sx, f.position.y * sy));
+            return { ...f, position: posed.position, facing: posed.facing };
+          });
+          const now = Date.now();
+          const layouts = get().layouts.map((layout) => ({
+            ...layout,
+            items: layout.items.map((item) =>
+              item.roomId === id
+                ? { ...item, position: v2(item.position.x * sx, item.position.y * sy) }
+                : item,
+            ),
+            updatedAt: now,
+          }));
+          const layoutId = get().layoutId;
+          const current = layouts.find((l) => l.id === layoutId);
+          await db().transaction('rw', [db().rooms, db().features, db().layouts], async () => {
+            await db().rooms.put(room);
+            if (features.length) await db().features.bulkPut(features);
+            if (layouts.length) await db().layouts.bulkPut(layouts);
+          });
+          set({
+            rooms: get().rooms.map((r) => (r.id === id ? room : r)),
+            features,
+            layouts,
+            layoutItems: current?.items ?? get().layoutItems,
+            dirty: false,
+          });
         },
 
         async updateProject(patch) {

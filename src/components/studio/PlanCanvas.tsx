@@ -152,7 +152,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
       for (const g of guidesNow) {
         const a = worldToScreen(vp, g.a);
         const b = worldToScreen(vp, g.b);
-        ctx.strokeStyle = g.kind === 'wall' ? '#6bb6a1' : '#dcb066';
+        ctx.strokeStyle = g.kind === 'wall' ? '#3f6b56' : '#8d6e38';
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
@@ -165,7 +165,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
     if (selected && !selected.placed.locked) {
       const h = rotateHandlePosition(selected, vp);
       const c = worldToScreen(vp, selected.obb.center);
-      ctx.strokeStyle = '#dcb066';
+      ctx.strokeStyle = '#8d6e38';
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -175,9 +175,9 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
       ctx.setLineDash([]);
       ctx.beginPath();
       ctx.arc(h.x, h.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = '#0d1015';
+      ctx.fillStyle = '#c3b9ab';
       ctx.fill();
-      ctx.strokeStyle = '#dcb066';
+      ctx.strokeStyle = '#8d6e38';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -360,7 +360,7 @@ export function PlanCanvas({ room, features, evaluation, ghostLayout, inventory,
   const selected = evaluation.resolved.find((r) => r.id === selection[0]);
 
   return (
-    <div ref={wrapRef} className="relative h-full w-full overflow-hidden bg-[#0d1015]">
+    <div ref={wrapRef} className="relative h-full w-full overflow-hidden bg-[#c3b9ab]">
       <canvas
         ref={canvasRef}
         className={

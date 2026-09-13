@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { BookMarked, ChevronDown, ChevronUp, GitCompare, Route, Settings2, SlidersHorizontal } from 'lucide-react';
 import { Button, cn } from '@/components/ui/primitives';
+import { HudFrame, Keycap } from '@/components/ui/hud';
 import { TopBar } from '@/components/studio/TopBar';
 import { LayoutRail } from '@/components/studio/LayoutRail';
 import { InventoryPanel } from '@/components/studio/InventoryPanel';
@@ -27,8 +28,9 @@ import { db } from '@/lib/db';
 const Scene3D = dynamic(() => import('@/components/studio/Scene3D').then((m) => m.Scene3D), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center text-[12px] text-ink-500">
-      preparing the three-dimensional view…
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-ink-500">
+      <div className="relative h-0.5 w-40 overflow-hidden bg-ink-800 sweep" />
+      <p className="text-[12.5px] text-ink-500">preparing the three-dimensional view…</p>
     </div>
   ),
 });
@@ -169,8 +171,8 @@ function StudioInner() {
 
   if (!ready || !room || !evaluation) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-ink-950">
-        <div className="relative h-0.5 w-40 overflow-hidden rounded-full bg-ink-800 sweep" />
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-ink-950">
+        <div className="relative h-0.5 w-48 overflow-hidden bg-ink-800 sweep" />
         <p className="text-[12.5px] text-ink-500">opening your rooms…</p>
       </div>
     );
@@ -201,7 +203,12 @@ function StudioInner() {
         <main className="flex min-w-0 flex-1 flex-col">
           <ReadoutStrip evaluation={evaluation} />
 
-          <div className="relative min-h-0 flex-1 border-y border-[color:var(--hairline)]">
+          <HudFrame
+            caption={
+              view === 'perspective' ? 'Walk the room' : view === 'plan' ? 'Floor plan' : 'Photo match'
+            }
+            className="relative min-h-0 flex-1 border-y border-[color:var(--hairline)]"
+          >
             {view === 'perspective' && (
               <>
                 <Scene3D
@@ -211,7 +218,7 @@ function StudioInner() {
                   ghostLayout={ghostLayout}
                   inventory={inventoryIndex}
                 />
-                <div className="pointer-events-none absolute left-3 top-3 text-[11px] text-ink-500">
+                <div className="pointer-events-none absolute left-8 top-8 text-[11px] text-ink-500">
                   WASD to walk · Q/E height · shift to sprint · drag empty space to look
                 </div>
               </>
@@ -226,7 +233,7 @@ function StudioInner() {
               />
             )}
             {view === 'photo' && <PhotoMatch room={room} evaluation={evaluation} />}
-          </div>
+          </HudFrame>
 
           <section
             className={cn(
@@ -234,27 +241,23 @@ function StudioInner() {
               drawerOpen ? 'h-[292px]' : 'h-9',
             )}
           >
-            <div className="flex h-9 shrink-0 items-center gap-1 px-2">
+            <div className="flex h-10 shrink-0 items-center gap-1 px-2">
               {(
                 [
-                  ['decisions', 'Decision log', BookMarked],
-                  ['compare', 'Compare', GitCompare],
-                  ['move', eventId ? 'Flip plan' : 'Move plan', Route],
+                  ['decisions', 'Decision log', BookMarked, 'Q'],
+                  ['compare', 'Compare', GitCompare, 'C'],
+                  ['move', eventId ? 'Flip plan' : 'Move plan', Route, 'M'],
                 ] as const
-              ).map(([key, label, Icon]) => (
+              ).map(([key, label, Icon, hotkey]) => (
                 <button
                   key={key}
                   onClick={() => {
                     setDrawer(key);
                     setDrawerOpen(true);
                   }}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded px-2 py-1 text-[12px] transition-colors',
-                    drawer === key && drawerOpen
-                      ? 'bg-ink-800 text-ink-50'
-                      : 'text-ink-500 hover:text-ink-200',
-                  )}
+                  className={cn('hotbar-btn h-8', drawer === key && drawerOpen && 'on')}
                 >
+                  <Keycap>{hotkey}</Keycap>
                   <Icon size={12} />
                   {label}
                 </button>

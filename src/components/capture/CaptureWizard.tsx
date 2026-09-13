@@ -29,6 +29,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { Badge, Button, Field, NumberInput, Panel, TextInput, cn } from '@/components/ui/primitives';
+import { HudFrame, Keycap, Mark } from '@/components/ui/hud';
 import { type Vec2, v2, v3 } from '@/lib/geometry/vec';
 import { type AnalyzeResult } from '@/lib/vision/analyze';
 import { analyzeImage, readPixels, sampleBoxColor } from '@/lib/vision/client';
@@ -335,8 +336,12 @@ export function CaptureWizard() {
 
   return (
     <div className="flex h-screen flex-col bg-ink-950">
-      <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[color:var(--hairline)] px-3">
-        <button onClick={() => router.push('/studio')} className="flex items-center gap-1.5 text-[13px] text-ink-400 hover:text-ink-100">
+      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-[color:var(--hairline)] bg-ink-900/70 px-3">
+        <button
+          onClick={() => router.push('/studio')}
+          className="flex items-center gap-2 text-[13px] text-ink-400 hover:text-ink-100"
+        >
+          <Mark size={22} />
           <ArrowLeft size={14} /> Studio
         </button>
         <ol className="flex items-center gap-1">
@@ -346,26 +351,28 @@ export function CaptureWizard() {
                 disabled={i > stepIndex && !(i === stepIndex + 1)}
                 onClick={() => i <= stepIndex && setStep(s.key)}
                 className={cn(
-                  'rounded px-2 py-1 text-[12px] transition-colors',
+                  'inline-flex items-center rounded px-2 py-1 text-[12px] transition-colors',
                   i === stepIndex
-                    ? 'bg-brass-500/15 text-brass-300'
+                    ? 'bg-brass-500/20 text-brass-300'
                     : i < stepIndex
                       ? 'text-ink-300 hover:bg-ink-800'
                       : 'text-ink-600',
                 )}
               >
-                <span className="tabular mr-1.5 text-[10.5px] text-ink-500">{i + 1}</span>
-                {s.label}
+                <Keycap>{i + 1}</Keycap>
+                <span className="ml-1.5">{s.label}</span>
               </button>
-              {i < STEPS.length - 1 && <span className="text-ink-700">·</span>}
+              {i < STEPS.length - 1 && <span className="text-ink-700">▸</span>}
             </li>
           ))}
         </ol>
-        <span className="ml-auto text-[12px] text-ink-500">{STEPS[stepIndex]?.blurb}</span>
+        <span className="ml-auto text-[12px] text-ink-500">
+          {STEPS[stepIndex]?.blurb}
+        </span>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <div className="relative min-w-0 flex-1 bg-[#08090c]">
+        <HudFrame caption="Photograph" className="relative min-w-0 flex-1 bg-[#c3b9ab]">
           {!url && <DropZone onFile={onFile} />}
           {url && pixels && (
             <PhotoStage
@@ -386,12 +393,12 @@ export function CaptureWizard() {
             />
           )}
           {analyzing && (
-            <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-ink-900/90 px-3 py-2 text-[12px] text-brass-300">
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-ink-900/90 px-3 py-2 text-[12px] text-brass-300">
               <Loader2 size={13} className="animate-spin" />
               detecting line segments and solving for the camera…
             </div>
           )}
-        </div>
+        </HudFrame>
 
         <aside className="flex w-[352px] shrink-0 flex-col gap-2 border-l border-[color:var(--hairline)] p-2">
           {step === 'photo' && <PhotoStep onFile={onFile} />}
@@ -853,7 +860,7 @@ function DropZone({ onFile }: { onFile: (f: File) => void | Promise<void> }) {
         if (f) void onFile(f);
       }}
       className={cn(
-        'absolute inset-6 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-colors',
+        'absolute inset-8 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-colors',
         over ? 'border-brass-400 bg-brass-500/5' : 'border-[color:var(--hairline)] hover:border-ink-500',
       )}
     >
@@ -866,7 +873,7 @@ function DropZone({ onFile }: { onFile: (f: File) => void | Promise<void> }) {
           if (f) void onFile(f);
         }}
       />
-      <Upload size={30} className="text-ink-600" />
+      <Upload size={30} className="text-brass-500" />
       <div className="text-center">
         <div className="text-[14px] text-ink-200">Drop a photograph of the room</div>
         <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-ink-500">

@@ -1,6 +1,19 @@
 import type { UnitSystem } from './domain/types';
 
 const INCH = 0.0254;
+export const FOOT = 0.3048;
+
+export function toDisplayLength(metres: number, units: UnitSystem): number {
+  return units === 'imperial' ? metres / FOOT : metres;
+}
+
+export function fromDisplayLength(value: number, units: UnitSystem): number {
+  return units === 'imperial' ? value * FOOT : value;
+}
+
+export function lengthSuffix(units: UnitSystem): string {
+  return units === 'imperial' ? 'ft' : 'm';
+}
 
 export function formatLength(metres: number, units: UnitSystem = 'metric', precise = false): string {
   if (!Number.isFinite(metres)) return '—';
