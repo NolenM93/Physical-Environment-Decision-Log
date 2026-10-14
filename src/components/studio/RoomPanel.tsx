@@ -4,11 +4,11 @@ import { useMemo, useState } from 'react';
 import { nanoid } from 'nanoid';
 import { Compass, DoorOpen, Plug, Sun, Trash2 } from 'lucide-react';
 import { Button, Field, NumberInput, Panel, Toggle, cn } from '@/components/ui/primitives';
-import { type Vec2, clamp, v2 } from '@/lib/geometry/vec';
-import { polygonCentroid } from '@/lib/geometry/shapes';
+import { clamp, v2 } from '@/lib/geometry/vec';
+import { aabbSize, polygonCentroid, snapToNearestWall } from '@/lib/geometry/shapes';
 import { localClockToInstant, sunPosition } from '@/lib/constraints/solar';
 import type { FeatureKind, RoomFeature } from '@/lib/domain/types';
-import { formatClock, formatLength } from '@/lib/format';
+import { formatClock, formatLength, fromDisplayLength, lengthSuffix, toDisplayLength } from '@/lib/format';
 import { useStudio } from '@/lib/store/studio';
 
 const FEATURE_LABELS: Record<FeatureKind, string> = {
@@ -37,32 +37,7 @@ const FEATURE_DEFAULTS: Record<FeatureKind, { width: number; height: number; sil
   tv_jack: { width: 0.08, height: 0.1, sillHeight: 0.3 },
 };
 
-/** Project a point onto the nearest wall and return the wall-aligned pose. */
-function snapToNearestWall(footprint: Vec2[], p: Vec2): { position: Vec2; facing: number } {
-  const centroid = polygonCentroid(footprint);
-  let best: { position: Vec2; facing: number; d: number } | null = null;
-  for (let i = 0, j = footprint.length - 1; i < footprint.length; j = i++) {
-    const a = footprint[j];
-    const b = footprint[i];
-    const ex = b.x - a.x;
-    const ey = b.y - a.y;
-    const len2 = ex * ex + ey * ey;
-    if (len2 < 1e-9) continue;
-    const t = Math.max(0, Math.min(1, ((p.x - a.x) * ex + (p.y - a.y) * ey) / len2));
-    const q = v2(a.x + ex * t, a.y + ey * t);
-    const d = Math.hypot(p.x - q.x, p.y - q.y);
-    let nx = -ey / Math.sqrt(len2);
-    let ny = ex / Math.sqrt(len2);
-    if ((centroid.x - q.x) * nx + (centroid.y - q.y) * ny < 0) {
-      nx = -nx;
-      ny = -ny;
-    }
-    if (!best || d < best.d) best = { position: q, facing: Math.atan2(ny, nx), d };
-  }
-  return best ?? { position: p, facing: 0 };
-}
-
-export function RoomPanel() {
+export function RoomPanel({ embedded = false }: { embedded?: boolean }) {
   const room = useStudio((s) => s.rooms.find((r) => r.id === s.roomId) ?? null);
   const features = useStudio((s) => s.features);
   const project = useStudio((s) => s.project);
@@ -70,6 +45,7 @@ export function RoomPanel() {
   const timeOfDay = useStudio((s) => s.timeOfDay);
   const dateISO = useStudio((s) => s.dateISO);
   const updateRoom = useStudio((s) => s.updateRoom);
+  const resizeRoom = useStudio((s) => s.resizeRoom);
   const updateProject = useStudio((s) => s.updateProject);
   const addFeature = useStudio((s) => s.addFeature);
   const updateFeature = useStudio((s) => s.updateFeature);
@@ -79,6 +55,8 @@ export function RoomPanel() {
   const toggleOverlay = useStudio((s) => s.toggleOverlay);
 
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [draftW, setDraftW] = useState<number | null>(null);
+  const [draftD, setDraftD] = useState<number | null>(null);
   const units = project?.unitSystem ?? 'metric';
 
   const sun = useMemo(() => {
@@ -116,17 +94,51 @@ export function RoomPanel() {
 
   const altitudeDeg = sun ? (sun.altitude * 180) / Math.PI : 0;
   const azimuthDeg = sun ? (sun.azimuth * 180) / Math.PI : 0;
+  const size = aabbSize(room.footprint);
+  const suffix = lengthSuffix(units);
 
-  return (
-    <Panel title="Room & constraints" className="min-h-0">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+  const body = (
+      <div className={cn('min-h-0 flex-1 space-y-4 overflow-y-auto', embedded ? 'p-1' : 'p-3')}>
+        <Field label="Name">
+          <input
+            value={room.name}
+            onChange={(e) => void updateRoom(room.id, { name: e.target.value })}
+            className="h-8 rounded-md border border-[color:var(--hairline)] bg-ink-950 px-2.5 text-[13px] text-ink-100 focus:border-brass-400 focus:outline-none"
+          />
+        </Field>
         <div className="grid grid-cols-2 gap-2">
+          <Field label="Length" hint="Along the guest doors">
+            <NumberInput
+              value={draftW ?? Math.round(toDisplayLength(size.width, units) * 100) / 100}
+              step={units === 'imperial' ? 0.5 : 0.1}
+              suffix={suffix}
+              onChange={setDraftW}
+              onBlur={() => {
+                if (draftW == null) return;
+                void resizeRoom(room.id, fromDisplayLength(draftW, units), size.depth);
+                setDraftW(null);
+              }}
+            />
+          </Field>
+          <Field label="Width">
+            <NumberInput
+              value={draftD ?? Math.round(toDisplayLength(size.depth, units) * 100) / 100}
+              step={units === 'imperial' ? 0.5 : 0.1}
+              suffix={suffix}
+              onChange={setDraftD}
+              onBlur={() => {
+                if (draftD == null) return;
+                void resizeRoom(room.id, size.width, fromDisplayLength(draftD, units));
+                setDraftD(null);
+              }}
+            />
+          </Field>
           <Field label="Ceiling">
             <NumberInput
-              value={room.ceilingHeight}
-              step={0.05}
-              onChange={(v) => void updateRoom(room.id, { ceilingHeight: v })}
-              suffix="m"
+              value={Math.round(toDisplayLength(room.ceilingHeight, units) * 100) / 100}
+              step={units === 'imperial' ? 0.25 : 0.05}
+              onChange={(v) => void updateRoom(room.id, { ceilingHeight: fromDisplayLength(v, units) })}
+              suffix={suffix}
             />
           </Field>
           <Field label="North bearing" hint="Which way the plan's downward axis points.">
@@ -139,6 +151,7 @@ export function RoomPanel() {
           </Field>
         </div>
 
+        {!embedded && (
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="rule-label flex items-center gap-1">
@@ -215,6 +228,7 @@ export function RoomPanel() {
             north bearing.
           </p>
         </div>
+        )}
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
@@ -346,6 +360,12 @@ export function RoomPanel() {
           </div>
         </div>
       </div>
+  );
+
+  if (embedded) return body;
+  return (
+    <Panel title="Room & constraints" className="min-h-0">
+      {body}
     </Panel>
   );
 }

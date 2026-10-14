@@ -72,6 +72,41 @@ export function aabbOf(points: Vec2[]): Aabb {
   return { min: v2(minX, minY), max: v2(maxX, maxY) };
 }
 
+/** Axis-aligned rectangle, origin at the south-west corner, CCW. */
+export function rectFootprint(width: number, depth: number): Vec2[] {
+  return [v2(0, 0), v2(width, 0), v2(width, depth), v2(0, depth)];
+}
+
+export function aabbSize(poly: Vec2[]): { width: number; depth: number } {
+  const box = aabbOf(poly);
+  return { width: box.max.x - box.min.x, depth: box.max.y - box.min.y };
+}
+
+/** Project a point onto the nearest wall; facing points into the room. */
+export function snapToNearestWall(footprint: Vec2[], p: Vec2): { position: Vec2; facing: number } {
+  const centroid = polygonCentroid(footprint);
+  let best: { position: Vec2; facing: number; d: number } | null = null;
+  for (let i = 0, j = footprint.length - 1; i < footprint.length; j = i++) {
+    const a = footprint[j];
+    const b = footprint[i];
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const len2 = ex * ex + ey * ey;
+    if (len2 < 1e-9) continue;
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * ex + (p.y - a.y) * ey) / len2));
+    const q = v2(a.x + ex * t, a.y + ey * t);
+    const d = Math.hypot(p.x - q.x, p.y - q.y);
+    let nx = -ey / Math.sqrt(len2);
+    let ny = ex / Math.sqrt(len2);
+    if ((centroid.x - q.x) * nx + (centroid.y - q.y) * ny < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    if (!best || d < best.d) best = { position: q, facing: Math.atan2(ny, nx), d };
+  }
+  return best ?? { position: p, facing: 0 };
+}
+
 export function aabbIntersects(a: Aabb, b: Aabb, pad = 0): boolean {
   return (
     a.min.x - pad <= b.max.x &&

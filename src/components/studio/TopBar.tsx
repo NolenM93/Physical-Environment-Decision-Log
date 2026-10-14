@@ -14,6 +14,7 @@ import {
   Waypoints,
 } from 'lucide-react';
 import { Badge, Button, Segmented, Toggle, cn } from '@/components/ui/primitives';
+import { Mark } from '@/components/ui/hud';
 import { useStudio } from '@/lib/store/studio';
 import type { ViewMode } from '@/lib/store/studio';
 
@@ -47,23 +48,21 @@ export function TopBar() {
   const layout = layouts.find((l) => l.id === layoutId);
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[color:var(--hairline)] bg-ink-900/80 px-3 backdrop-blur">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[color:var(--hairline)] bg-ink-900/80 px-3 backdrop-blur">
       <Link href="/" className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded bg-brass-500 text-[13px] font-semibold text-ink-950">
-          S
-        </span>
-        <span className="text-[14px] font-medium tracking-tight text-ink-50">Stanza</span>
+        <Mark size={26} />
+        <span className="font-display text-[18px] leading-none text-ink-50">Stanza</span>
       </Link>
 
       <span className="h-5 w-px bg-[color:var(--hairline)]" />
 
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-[13px] text-ink-300">{project?.name}</span>
+        <span className="truncate text-[13px] text-ink-200">{project?.name}</span>
         {rooms.length > 1 ? (
           <select
             value={roomId ?? ''}
             onChange={(e) => void selectRoom(e.target.value)}
-            className="h-7 rounded border border-[color:var(--hairline)] bg-ink-900 px-1.5 text-[12.5px] text-ink-200 focus:outline-none"
+            className="h-7 rounded border border-[color:var(--hairline)] bg-ink-950 px-1.5 text-[12.5px] text-ink-200 focus:outline-none"
           >
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>

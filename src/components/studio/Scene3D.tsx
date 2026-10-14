@@ -507,11 +507,11 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
     <>
       <CameraRig room={room} target={orbitTarget} controls={controls} quiet={quiet} />
       <WalkControls enabled={!draggingId} controls={controls} target={orbitTarget} />
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={['#cfe0f2', '#20262f', 0.6]} />
+      <ambientLight intensity={0.85} />
+      <hemisphereLight args={['#e4d9c8', '#8a8174', 0.55]} />
       <directionalLight
         position={[room.footprint[0].x - 4, 6.5, room.footprint[0].y - 3]}
-        intensity={1.15}
+        intensity={1.35}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-10}
@@ -529,7 +529,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
         onPointerDown={() => setSelection([])}
       >
         <planeGeometry args={[400, 400]} />
-        <meshBasicMaterial color="#0b0d10" />
+        <meshBasicMaterial color="#b0a696" />
       </mesh>
 
       <RoomShell room={room} features={features} showGrid={!quiet && overlays.grid} />
@@ -579,7 +579,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
         blur={2.2}
         far={4}
         resolution={1024}
-        color="#05070a"
+        color="#6f675c"
       />
 
       <OrbitControls
@@ -611,12 +611,12 @@ export function Scene3D(props: SceneProps) {
       camera={{ fov: 42, near: 0.05, far: 200 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
+        gl.toneMappingExposure = 1.2;
       }}
       className="h-full w-full"
     >
-      <color attach="background" args={['#0b0d10']} />
-      <fog attach="fog" args={['#0b0d10', 18, 46]} />
+      <color attach="background" args={['#c3b9ab']} />
+      <fog attach="fog" args={['#c3b9ab', 22, 52]} />
       <SceneContents {...props} />
     </Canvas>
   );

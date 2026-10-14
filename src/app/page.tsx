@@ -88,6 +88,12 @@ export default function LandingPage() {
             </span>
             <ArrowRight size={16} />
           </Button>
+          <Link href="/new" className="w-full">
+            <Button variant="outline" size="lg" className="h-12 w-full justify-between px-4 text-[15px]">
+              <span>Draw your own room</span>
+              <ArrowRight size={16} />
+            </Button>
+          </Link>
           <Link href="/capture" className="w-full">
             <Button variant="outline" size="lg" className="h-12 w-full justify-between px-4 text-[15px]">
               <span className="flex items-center gap-2">
