@@ -1,0 +1,7 @@
+{
+  "name": "fast-glob",
+  "version": "3.3.3",
+  "private": true,
+  "description": "Stand-in for fast-glob that does not pull in micromatch or braces.",
+  "main": "index.js"
+}
