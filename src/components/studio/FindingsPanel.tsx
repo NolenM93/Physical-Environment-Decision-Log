@@ -49,7 +49,6 @@ export function FindingsPanel({
   }, [evaluation]);
 
   const findings = (evaluation?.findings ?? []).filter((f) => {
-    if (simple) return f.severity !== 'note';
     return filter === 'all' || f.severity === filter;
   });
 

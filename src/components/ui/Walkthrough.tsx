@@ -226,7 +226,7 @@ export const BANQUET_TOUR: TourStep[] = [
     id: 'welcome',
     title: 'This is one wedding.',
     openTray: null,
-    body: 'Same ballroom all night. You are not decorating — you are choosing how the room is set for each part of the evening, then handing that to the crew who actually move the furniture.',
+    body: 'Same ballroom all night. You are not decorating. You are choosing how the room is set for each part of the evening, then handing that to the crew who actually move the furniture.',
   },
   {
     id: 'setups',
@@ -245,7 +245,7 @@ export const BANQUET_TOUR: TourStep[] = [
     target: '[data-tour="floor"]',
     openTray: null,
     title: 'The floor is the job.',
-    body: 'Drag a table to move it. The small handle turns it. This is the measured ballroom — what the couple will walk, and what housemen will set.',
+    body: 'Drag a table to move it. The small handle turns it. This is the measured ballroom: what the couple will walk, and what housemen will set.',
   },
   {
     id: 'stock',

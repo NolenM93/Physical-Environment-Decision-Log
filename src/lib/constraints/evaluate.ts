@@ -249,7 +249,7 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
           code: 'route-severed',
           severity: 'blocker',
           title: 'You cannot walk between two of the doors',
-          detail: `Nothing gets you from the ${doorLabel(doors[0])} to the ${doorLabel(doors[i])} without turning sideways — every route is under ${(secondaryCorridor * 100).toFixed(0)} cm at some point.`,
+          detail: `Nothing gets you from the ${doorLabel(doors[0])} to the ${doorLabel(doors[i])} without turning sideways. Every route is under ${(secondaryCorridor * 100).toFixed(0)} cm at some point.`,
           itemIds: [],
           featureIds: [doors[0].id, doors[i].id],
           at: doorSeeds[i],
@@ -382,7 +382,7 @@ export function evaluateLayout(input: EvaluationInput): Evaluation {
         code: 'floating',
         severity: 'note',
         title: `${r.item.label} is floating`,
-        detail: `It sits ${gap.toFixed(2)} m off the nearest wall. Deliberate zoning or wasted floor — you decide, but note it.`,
+        detail: `It sits ${gap.toFixed(2)} m off the nearest wall. Deliberate zoning or wasted floor: you decide, but note it.`,
         itemIds: [r.id],
         featureIds: [],
         measured: { value: gap, target: 0.35, unit: 'm', comparison: 'max' },
@@ -795,7 +795,7 @@ function buildReadouts(args: {
       {
         label: 'Fire aisle',
         value: tightest > 0 ? `${(tightest * 100).toFixed(0)} cm` : 'severed',
-        hint: `Tightest walk between openings. House target ${BANQUET_FIRE_AISLE} m — not a legal cert.`,
+        hint: `Tightest walk between openings. House target ${BANQUET_FIRE_AISLE} m, not a legal cert.`,
         tone: tightest === 0 ? 'poor' : aisleTone,
       },
       {
@@ -831,7 +831,7 @@ function buildReadouts(args: {
     },
     {
       label: 'Narrowest route',
-      value: tightest > 0 ? `${(tightest * 100).toFixed(0)} cm` : '—',
+      value: tightest > 0 ? `${(tightest * 100).toFixed(0)} cm` : '-',
       hint: 'The pinch point on the walk between the doors.',
       tone: tightest > 0.9 ? 'good' : tightest > 0.75 ? 'fair' : 'poor',
     },

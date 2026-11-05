@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       {
         error: 'not-configured',
         message:
-          'No vision provider is configured. Set STANZA_VISION_API_KEY (and optionally STANZA_VISION_BASE_URL and STANZA_VISION_MODEL) to enable automatic detection. Everything else works without it — draw boxes by hand and the calibration still measures them.',
+          'No vision provider is configured. Set STANZA_VISION_API_KEY (and optionally STANZA_VISION_BASE_URL and STANZA_VISION_MODEL) to enable automatic detection. Everything else works without it: draw boxes by hand and the calibration still measures them.',
       },
       { status: 501 },
     );

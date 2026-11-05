@@ -247,7 +247,7 @@ export function buildMovePlan(input: MovePlanInput): MovePlan {
         }
       } else {
         warnings.push(
-          `${item.label} has no clear route to its new spot — something else has to come out of the way first, or it goes out of the room and back in.`,
+          `${item.label} has no clear route to its new spot. Something else has to come out of the way first, or it goes out of the room and back in.`,
         );
       }
     }
@@ -429,7 +429,7 @@ function instructionFor(
     case 'introduce':
       return `Bring the ${name.toLowerCase()} in and set it ${landmarkPhrase(toPos!, room, features)}.`;
     case 'stage':
-      return `Shift the ${name.toLowerCase()} out of the way for now — park it ${landmarkPhrase(toPos!, room, features)}. It goes back at the end.`;
+      return `Shift the ${name.toLowerCase()} out of the way for now, and park it ${landmarkPhrase(toPos!, room, features)}. It goes back at the end.`;
     case 'rotate':
       return `Leave the ${name.toLowerCase()} where it is${turn || ' and turn it to its new angle'}.`;
     case 'return':

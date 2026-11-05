@@ -63,7 +63,7 @@ export async function seedHarborProject(): Promise<string> {
     const reception = await d.layouts.get(HARBOR_COCKTAIL_ID);
     if (reception && reception.setupKind !== 'reception') {
       await d.layouts.update(HARBOR_COCKTAIL_ID, {
-        name: 'Reception — lounge',
+        name: 'Reception: lounge',
         setupKind: 'reception',
       });
     }
