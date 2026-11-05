@@ -260,7 +260,7 @@ export function buildDemoContent(now: number): DemoContent {
       verdict: 'implemented',
       title: 'Baseline, as we moved in',
       rationale:
-        'How the removal firm left it. Nothing is actually wrong with it, which is why it survived a year — but the sofa is the whole length of the room away from the television, and the bay window does nothing at all.',
+        'How the removal firm left it. Nothing is actually wrong with it, which is why it survived a year, but the sofa is the whole length of the room away from the television, and the bay window does nothing at all.',
       pros: ['TV cable already on that wall', 'Nothing blocks the radiator', 'Clear walk from the hall to the kitchen'],
       cons: ['Four metres from a 55-inch screen', 'Dead space in the bay', 'Everyone sits along one wall'],
       tags: ['baseline'],
@@ -291,7 +291,7 @@ export function buildDemoContent(now: number): DemoContent {
       verdict: 'exploring',
       title: 'Pull the chair off the wall',
       rationale:
-        'Trying to make the room work for four people talking rather than two people watching. It does — but it costs the through-route, which drops to 60 cm past the coffee table, and half the floor becomes somewhere you only edge into.',
+        'Trying to make the room work for four people talking rather than two people watching. It does, but it costs the through-route, which drops to 60 cm past the coffee table, and half the floor becomes somewhere you only edge into.',
       pros: ['Seats face each other', 'Television still watchable from both'],
       cons: ['Route through narrows to 60 cm', 'Walkable floor down to 5.5 m²', 'An hour of work for two people'],
       tags: ['hosting'],

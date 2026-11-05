@@ -62,7 +62,7 @@ export function analyzePhoto(req: AnalyzeRequest): AnalyzeResult {
   diagnostics.push(`${segments.length} line segments extracted.`);
   if (vanishing.vertical) {
     diagnostics.push(
-      `Vertical vanishing point locked from ${vanishing.vertical.inliers.length} segments — the camera's roll and pitch are known.`,
+      `Vertical vanishing point locked from ${vanishing.vertical.inliers.length} segments. The camera's roll and pitch are known.`,
     );
   } else {
     diagnostics.push(
@@ -71,14 +71,14 @@ export function analyzePhoto(req: AnalyzeRequest): AnalyzeResult {
   }
   if (vanishing.horizontal.length >= 2) {
     diagnostics.push(
-      `Two horizontal vanishing points found (${vanishing.horizontal[0].inliers.length} and ${vanishing.horizontal[1].inliers.length} segments) — full Manhattan frame recovered.`,
+      `Two horizontal vanishing points found (${vanishing.horizontal[0].inliers.length} and ${vanishing.horizontal[1].inliers.length} segments). Full Manhattan frame recovered.`,
     );
   } else if (vanishing.horizontal.length === 1) {
     diagnostics.push(
       'Only one horizontal vanishing point found. One wall direction is known; the perpendicular one is assumed.',
     );
   } else {
-    diagnostics.push('No horizontal vanishing points found — try a photo that shows a corner of the room.');
+    diagnostics.push('No horizontal vanishing points found. Try a photo that shows a corner of the room.');
   }
   if (calibration.source === 'assumed-fov') {
     diagnostics.push(
@@ -90,7 +90,7 @@ export function analyzePhoto(req: AnalyzeRequest): AnalyzeResult {
     );
   }
   diagnostics.push(
-    `Scale is anchored entirely on the stated camera height of ${req.cameraHeight.toFixed(2)} m — every measurement scales linearly with it.`,
+    `Scale is anchored entirely on the stated camera height of ${req.cameraHeight.toFixed(2)} m. Every measurement scales linearly with it.`,
   );
 
   return {

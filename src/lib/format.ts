@@ -16,7 +16,7 @@ export function lengthSuffix(units: UnitSystem): string {
 }
 
 export function formatLength(metres: number, units: UnitSystem = 'metric', precise = false): string {
-  if (!Number.isFinite(metres)) return '—';
+  if (!Number.isFinite(metres)) return '-';
   if (units === 'imperial') {
     const totalInches = metres / INCH;
     const feet = Math.floor(totalInches / 12);
@@ -29,19 +29,19 @@ export function formatLength(metres: number, units: UnitSystem = 'metric', preci
 }
 
 export function formatArea(m2: number, units: UnitSystem = 'metric'): string {
-  if (!Number.isFinite(m2)) return '—';
+  if (!Number.isFinite(m2)) return '-';
   if (units === 'imperial') return `${(m2 * 10.7639).toFixed(1)} ft²`;
   return `${m2.toFixed(1)} m²`;
 }
 
 export function formatMass(kg: number, units: UnitSystem = 'metric'): string {
-  if (!Number.isFinite(kg)) return '—';
+  if (!Number.isFinite(kg)) return '-';
   if (units === 'imperial') return `${Math.round(kg * 2.20462)} lb`;
   return `${kg < 10 ? kg.toFixed(1) : Math.round(kg)} kg`;
 }
 
 export function formatDuration(minutes: number): string {
-  if (!Number.isFinite(minutes) || minutes <= 0) return '—';
+  if (!Number.isFinite(minutes) || minutes <= 0) return '-';
   if (minutes < 60) return `${Math.round(minutes)} min`;
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes - h * 60);

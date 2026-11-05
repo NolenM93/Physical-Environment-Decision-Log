@@ -102,7 +102,7 @@ export function NewRoomForm() {
             </h1>
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-ink-300">
               Type the length, width and ceiling. The floor starts empty. Banquet rooms come with
-              house stock and three setups — ceremony, reception, dinner — so you can place tables
+              house stock and three setups (ceremony, reception, dinner) so you can place tables
               the way the hotel actually sets them.
             </p>
 

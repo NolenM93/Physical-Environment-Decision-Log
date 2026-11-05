@@ -172,8 +172,8 @@ export function PlanCanvas({
       sunPatches: evaluation.sunPatches,
       ghostItems: overlays.ghost ? ghostItems : undefined,
       showGrid: simpleHints ? false : overlays.grid,
-      showClearance: simpleHints ? false : overlays.clearance,
-      showCirculation: simpleHints ? false : overlays.circulation,
+      showClearance: overlays.clearance,
+      showCirculation: overlays.circulation,
       showDimensions: simpleHints ? true : overlays.measurements,
       showDoorSwings: overlays.doorSwings,
       showFindings: simpleHints ? false : overlays.findings,
@@ -523,7 +523,11 @@ export function PlanCanvas({
         </div>
       )}
 
-      <div className="pointer-events-none absolute left-4 top-4 text-[12px] text-ink-500">
+      <div
+        className={`pointer-events-none absolute left-4 top-4 text-[12px] text-ink-500 ${
+          addingCorner ? '' : 'hidden md:block'
+        }`}
+      >
         {addingCorner
           ? 'Click a wall to add a corner.'
           : simpleHints

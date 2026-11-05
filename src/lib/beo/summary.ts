@@ -135,5 +135,5 @@ export function formatBeoDate(iso: string) {
 
 export function formatTimeRange(slot: BeoSlot) {
   if (slot.start && slot.end) return `${slot.start}–${slot.end}`;
-  return slot.start ?? slot.end ?? '—';
+  return slot.start ?? slot.end ?? '-';
 }

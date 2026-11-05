@@ -192,7 +192,7 @@ export function liftDetection(
         rotation = Math.atan2(dir.y, dir.x);
       }
       provenance.push(
-        `Base sits off the floor — solved against the wall plane, mounted ${elevation.toFixed(2)} m up.`,
+        `Base sits off the floor, solved against the wall plane, mounted ${elevation.toFixed(2)} m up.`,
       );
     }
   }
@@ -215,7 +215,7 @@ export function liftDetection(
   }
 
   const depth = clamp(clampedWidth * prior.depthRatio, 0.05, 4.5);
-  provenance.push('Depth is inferred from the category — the far side is not visible in one photo.');
+  provenance.push('Depth is inferred from the category. The far side is not visible in one photo.');
 
   // --- snap yaw to the Manhattan grid when it is close ---
   const snapped = snapYaw(rotation, yawSnapTolerance);

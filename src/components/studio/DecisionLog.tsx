@@ -76,7 +76,13 @@ function ListEditor({
   );
 }
 
-export function DecisionLog({ evaluation }: { evaluation: Evaluation | null }) {
+export function DecisionLog({
+  evaluation,
+  simple = false,
+}: {
+  evaluation: Evaluation | null;
+  simple?: boolean;
+}) {
   const decisions = useStudio((s) => s.decisions);
   const layouts = useStudio((s) => s.layouts);
   const roomId = useStudio((s) => s.roomId);
@@ -141,16 +147,18 @@ export function DecisionLog({ evaluation }: { evaluation: Evaluation | null }) {
   return (
     <Panel
       title={
-        <span className="flex items-center gap-1.5">
-          <BookMarked size={12} /> Decision log
-        </span>
+        simple ? undefined : (
+          <span className="flex items-center gap-1.5">
+            <BookMarked size={12} /> Decision log
+          </span>
+        )
       }
       action={
         <Button size="sm" variant={composing ? 'ghost' : 'subtle'} onClick={() => setComposing((v) => !v)}>
           {composing ? 'Cancel' : 'Record a decision'}
         </Button>
       }
-      className="min-h-0"
+      className={cn('min-h-0', simple && 'border-0 bg-transparent')}
     >
       {composing && (
         <div className="space-y-2.5 border-b border-[color:var(--hairline)] p-3">
@@ -216,7 +224,7 @@ export function DecisionLog({ evaluation }: { evaluation: Evaluation | null }) {
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {entries.length === 0 && (
           <div className="px-3 py-6 text-center text-[12.5px] leading-relaxed text-ink-500">
-            No entries yet. Every time you rule an arrangement in or out, write down why — that
+            No entries yet. Every time you rule an arrangement in or out, write down why. That
             record is what stops you relitigating the same argument next year.
           </div>
         )}

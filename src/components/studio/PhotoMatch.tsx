@@ -222,7 +222,7 @@ export function PhotoMatch({ room, evaluation }: { room: Room; evaluation: Evalu
       <div className="absolute left-3 top-3 rounded bg-ink-900/85 px-2 py-1 text-[11px] text-ink-400">
         {photo.calibration?.source === 'vanishing-points'
           ? `focal ${Math.round(photo.calibration.focal)} px · ${photo.calibration.fovDeg.toFixed(0)}° vertical · ${Math.round((photo.calibration.confidence ?? 0) * 100)}% confidence`
-          : 'field of view was assumed — measurements scale with it'}
+          : 'field of view was assumed; measurements scale with it'}
       </div>
     </div>
   );

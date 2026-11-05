@@ -238,7 +238,7 @@ export function ComparePanel({ evaluation }: { evaluation: Evaluation | null }) 
                   neutral ? 'text-ink-600' : improved ? 'text-signal-green' : 'text-signal-red',
                 )}
               >
-                {neutral ? '—' : `${delta > 0 ? '+' : ''}${row.format(delta).replace('%', '')}${row.format(0).includes('%') ? '%' : ''}`}
+                {neutral ? '-' : `${delta > 0 ? '+' : ''}${row.format(delta).replace('%', '')}${row.format(0).includes('%') ? '%' : ''}`}
               </span>
             </div>
           );

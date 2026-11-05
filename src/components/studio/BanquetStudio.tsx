@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { nanoid } from 'nanoid';
 import {
   AlertTriangle,
+  BookMarked,
   Box,
   Check,
   ClipboardList,
@@ -28,8 +29,10 @@ import { Button, Segmented, cn } from '@/components/ui/primitives';
 import { PlanCanvas } from '@/components/studio/PlanCanvas';
 import { FindingsPanel } from '@/components/studio/FindingsPanel';
 import { MovePlanPanel } from '@/components/studio/MovePlanPanel';
+import { DecisionLog } from '@/components/studio/DecisionLog';
 import { DoorChip, RoomEditor, RoomSizeButton } from '@/components/studio/RoomEditor';
 import { BeoPanel } from '@/components/studio/BeoPanel';
+import type { Overlays } from '@/lib/store/studio';
 import { CATEGORY_KEYS, ROOM_CATEGORY_HINTS, estimateMass, priorFor } from '@/lib/domain/catalog';
 import type { Evaluation } from '@/lib/constraints/evaluate';
 import type {
@@ -63,7 +66,7 @@ const SETUP_LABEL: Record<SetupKind, string> = {
   other: 'Setup',
 };
 
-type Tray = 'add' | 'fix' | 'flip' | 'room' | 'beo';
+type Tray = 'add' | 'fix' | 'flip' | 'room' | 'beo' | 'log';
 
 function useTemporal() {
   const [state, setState] = useState(() => useStudio.temporal.getState());
@@ -118,6 +121,7 @@ export function BanquetStudio({
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [addingCorner, setAddingCorner] = useState(false);
   const temporal = useTemporal();
+  const logCount = useStudio((s) => s.decisions.filter((d) => d.roomId === s.roomId).length);
 
   const setups = useMemo(() => {
     if (event) {
@@ -137,8 +141,7 @@ export function BanquetStudio({
   const covers = evaluation.metrics.covers ?? 0;
   const aisle = evaluation.metrics.aisleM;
   const standing = isStanding(layout?.setupKind);
-  const setupIndex = layoutId ? setups.findIndex((s) => s.id === layoutId) : -1;
-  const canFlip = Boolean(event ? setupIndex > 0 : setups.length > 1 && layout && !layout.isCurrent);
+  const canFlip = setups.length > 1;
 
   const toggleTray = (next: Tray) => setTray((cur) => (cur === next ? null : next));
 
@@ -259,10 +262,10 @@ export function BanquetStudio({
         </nav>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <main className="relative min-w-0 flex-1">
-          {view === 'perspective' ? (
-            <>
+          <div className="absolute inset-0">
+            {view === 'perspective' ? (
               <Scene3D
                 room={room}
                 features={features}
@@ -271,26 +274,28 @@ export function BanquetStudio({
                 inventory={inventory}
                 quiet
               />
-              <p className="pointer-events-none absolute left-4 top-4 text-[12px] text-ink-500">
-                Drag empty space to look around. Click a piece to move it.
-              </p>
-            </>
-          ) : (
-            <PlanCanvas
-              room={room}
-              features={features}
-              evaluation={evaluation}
-              ghostLayout={ghostLayout}
-              inventory={inventory}
-              simpleHints
-              selectedFeatureId={selectedFeatureId}
-              onSelectFeature={setSelectedFeatureId}
-              addingCorner={addingCorner}
-              onAddedCorner={() => setAddingCorner(false)}
-            />
+            ) : (
+              <PlanCanvas
+                room={room}
+                features={features}
+                evaluation={evaluation}
+                ghostLayout={ghostLayout}
+                inventory={inventory}
+                simpleHints
+                selectedFeatureId={selectedFeatureId}
+                onSelectFeature={setSelectedFeatureId}
+                addingCorner={addingCorner}
+                onAddedCorner={() => setAddingCorner(false)}
+              />
+            )}
+          </div>
+          {view === 'perspective' && (
+            <p className="pointer-events-none absolute left-3 top-3 hidden max-w-[min(280px,calc(100%-13rem))] text-[12px] text-ink-500 sm:left-4 sm:top-4 md:block">
+              Drag empty space to look around. Click a piece to move it.
+            </p>
           )}
 
-          <div className="absolute right-4 top-4 flex w-[200px] flex-col items-stretch gap-2">
+          <div className="absolute right-3 top-3 flex w-[min(200px,calc(100%-1.5rem))] flex-col items-stretch gap-2 sm:right-4 sm:top-4">
             <RoomSizeButton
               onClick={() => {
                 setView('plan');
@@ -303,13 +308,22 @@ export function BanquetStudio({
               guestCount={event?.guestCount}
               aisle={aisle}
               issues={issues}
+              evaluation={evaluation}
               onFix={() => toggleTray('fix')}
             />
           </div>
 
-          <div className="absolute bottom-4 left-4 flex flex-wrap items-center gap-2">
+          <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2 sm:bottom-4 sm:left-4 sm:right-auto">
             <Button size="lg" variant="primary" onClick={() => toggleTray('add')}>
               <Plus size={16} /> Add furniture
+            </Button>
+            <Button
+              size="lg"
+              variant={tray === 'log' ? 'primary' : 'subtle'}
+              onClick={() => toggleTray('log')}
+            >
+              <BookMarked size={15} /> Decision log
+              {logCount > 0 && <span className="tabular text-ink-500"> {logCount}</span>}
             </Button>
             {event && (
               <Button size="lg" variant={tray === 'beo' ? 'primary' : 'subtle'} onClick={() => toggleTray('beo')}>
@@ -327,7 +341,7 @@ export function BanquetStudio({
               <Square size={15} /> Edit room
             </Button>
             {canFlip && (
-              <Button size="lg" variant="subtle" onClick={() => toggleTray('flip')}>
+              <Button size="lg" variant={tray === 'flip' ? 'primary' : 'subtle'} onClick={() => toggleTray('flip')}>
                 <Route size={15} /> What to move
               </Button>
             )}
@@ -340,38 +354,48 @@ export function BanquetStudio({
         </main>
 
         {tray && (
-          <aside className="flex w-[min(360px,100%)] shrink-0 flex-col border-l border-[color:var(--hairline)] bg-ink-900">
-            <div className="flex h-12 shrink-0 items-center justify-between px-4">
-              <span className="text-[14px] font-medium text-ink-100">
-                {tray === 'add' && 'Add furniture'}
-                {tray === 'fix' && (issues ? `${issues} to fix` : 'Looks good')}
-                {tray === 'flip' && 'What to move'}
-                {tray === 'room' && 'Edit the room'}
-                {tray === 'beo' && 'Event sheet'}
-              </span>
-              <button
-                onClick={() => setTray(null)}
-                className="rounded-md p-1.5 text-ink-500 hover:bg-ink-800 hover:text-ink-100"
-                title="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 px-2 pb-3">
-              {tray === 'add' && <FurnitureTray />}
-              {tray === 'fix' && <FindingsPanel evaluation={evaluation} simple />}
-              {tray === 'flip' && <MovePlanPanel simple />}
-              {tray === 'beo' && <BeoPanel evaluation={evaluation} />}
-              {tray === 'room' && (
-                <RoomEditor
-                  selectedFeatureId={selectedFeatureId}
-                  onSelectFeature={setSelectedFeatureId}
-                  addingCorner={addingCorner}
-                  onToggleCorner={() => setAddingCorner((v) => !v)}
-                />
-              )}
-            </div>
-          </aside>
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-20 bg-ink-50/40 md:hidden"
+              aria-label="Close panel"
+              onClick={() => setTray(null)}
+            />
+            <aside className="z-30 flex w-[min(360px,100%)] shrink-0 flex-col border-l border-[color:var(--hairline)] bg-ink-900 max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[min(72vh,560px)] max-md:w-full max-md:rounded-t-2xl max-md:border-l-0 max-md:border-t max-md:shadow-xl">
+              <div className="flex h-12 shrink-0 items-center justify-between px-4">
+                <span className="text-[14px] font-medium text-ink-100">
+                  {tray === 'add' && 'Add furniture'}
+                  {tray === 'fix' && (issues ? `${issues} to fix` : 'Layout checks')}
+                  {tray === 'flip' && 'What to move'}
+                  {tray === 'room' && 'Edit the room'}
+                  {tray === 'beo' && 'Event sheet'}
+                  {tray === 'log' && 'Decision log'}
+                </span>
+                <button
+                  onClick={() => setTray(null)}
+                  className="rounded-md p-1.5 text-ink-500 hover:bg-ink-800 hover:text-ink-100"
+                  title="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 px-2 pb-3">
+                {tray === 'add' && <FurnitureTray />}
+                {tray === 'fix' && <FindingsPanel evaluation={evaluation} simple />}
+                {tray === 'flip' && <MovePlanPanel simple />}
+                {tray === 'beo' && <BeoPanel evaluation={evaluation} />}
+                {tray === 'log' && <DecisionLog evaluation={evaluation} simple />}
+                {tray === 'room' && (
+                  <RoomEditor
+                    selectedFeatureId={selectedFeatureId}
+                    onSelectFeature={setSelectedFeatureId}
+                    addingCorner={addingCorner}
+                    onToggleCorner={() => setAddingCorner((v) => !v)}
+                  />
+                )}
+              </div>
+            </aside>
+          </>
         )}
       </div>
     </div>
@@ -401,6 +425,7 @@ function StatusCard({
   guestCount,
   aisle,
   issues,
+  evaluation,
   onFix,
 }: {
   standing: boolean;
@@ -408,11 +433,13 @@ function StatusCard({
   guestCount?: number;
   aisle?: number;
   issues: number;
+  evaluation: Evaluation;
   onFix: () => void;
 }) {
   const seatsOk = guestCount != null && covers >= guestCount;
   const walkOk = aisle != null && aisle >= 1.8;
   const walkTight = aisle != null && aisle > 0 && aisle < 1.8;
+  const extras = evaluation.readouts.filter((r) => r.label !== 'Covers' && r.label !== 'Fire aisle');
 
   return (
     <div className="rounded-2xl border border-[color:var(--hairline)] bg-ink-900/95 p-3 shadow-lg backdrop-blur">
@@ -427,7 +454,7 @@ function StatusCard({
             <span className="text-ink-400"> of {guestCount} seats</span>
           </div>
         ))}
-      <div className="mt-1 text-[13px]">
+      <div className={cn('text-[13px]', guestCount != null && 'mt-1')}>
         <span className="text-ink-500">Walkway </span>
         <span
           className={cn(
@@ -438,6 +465,24 @@ function StatusCard({
           {aisle && aisle > 0 ? `${Math.round(aisle * 100)} cm` : 'blocked'}
         </span>
       </div>
+      {extras.map((row) => (
+        <div key={row.label} className="mt-1 hidden items-baseline justify-between gap-2 text-[12px] sm:flex">
+          <span className="text-ink-500">{row.label}</span>
+          <span
+            title={row.hint}
+            className={cn(
+              'tabular font-medium',
+              row.tone === 'good' && 'text-signal-green',
+              row.tone === 'fair' && 'text-signal-amber',
+              row.tone === 'poor' && 'text-signal-red',
+              row.tone === 'neutral' && 'text-ink-200',
+            )}
+          >
+            {row.value}
+          </span>
+        </div>
+      ))}
+      <OverlayChips />
       {issues > 0 ? (
         <button
           onClick={onFix}
@@ -447,10 +492,44 @@ function StatusCard({
           {issues} to fix
         </button>
       ) : (
-        <div className="mt-2 flex items-center justify-center gap-1.5 text-[13px] text-signal-green">
-          <Check size={13} /> Looks good
-        </div>
+        <button
+          type="button"
+          onClick={onFix}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] text-signal-green hover:bg-ink-800"
+        >
+          <Check size={13} /> Layout checks
+        </button>
       )}
+    </div>
+  );
+}
+
+function OverlayChips() {
+  const overlays = useStudio((s) => s.overlays);
+  const toggleOverlay = useStudio((s) => s.toggleOverlay);
+  const chips: { key: keyof Overlays; label: string }[] = [
+    { key: 'doorSwings', label: 'Doors' },
+    { key: 'circulation', label: 'Walk' },
+    { key: 'sunlight', label: 'Daylight' },
+    { key: 'measurements', label: 'Size' },
+  ];
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {chips.map((chip) => (
+        <button
+          key={chip.key}
+          type="button"
+          onClick={() => toggleOverlay(chip.key)}
+          className={cn(
+            'rounded-md px-1.5 py-0.5 text-[11px] font-medium',
+            overlays[chip.key]
+              ? 'bg-brass-500/20 text-brass-300'
+              : 'bg-ink-850 text-ink-500 hover:text-ink-200',
+          )}
+        >
+          {chip.label}
+        </button>
+      ))}
     </div>
   );
 }

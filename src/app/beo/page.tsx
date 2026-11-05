@@ -152,7 +152,7 @@ function BeoSheet() {
         <section className="mb-6 grid grid-cols-3 gap-4 text-[12.5px]">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-widest text-[#777]">Contact</div>
-            <div>{event.contactName ?? '—'}</div>
+            <div>{event.contactName ?? '-'}</div>
             {event.contactPhone && <div>{event.contactPhone}</div>}
             {event.contactEmail && <div>{event.contactEmail}</div>}
           </div>
@@ -195,7 +195,7 @@ function BeoSheet() {
                     {isStanding(row.layout.setupKind) ? 'Standing' : `${row.covers} / ${event.guestCount}`}
                   </td>
                   <td className="py-2 pr-2 font-mono">
-                    {row.aisleM && row.aisleM > 0 ? formatLength(row.aisleM, units) : '—'}
+                    {row.aisleM && row.aisleM > 0 ? formatLength(row.aisleM, units) : '-'}
                   </td>
                   <td className="py-2 text-[#444]">{row.slot.notes ?? ''}</td>
                 </tr>

@@ -371,8 +371,8 @@ export function CaptureWizard() {
         </span>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <HudFrame caption="Photograph" className="relative min-w-0 flex-1 bg-[#c3b9ab]">
+      <div className="flex min-h-0 flex-1 max-md:flex-col">
+        <HudFrame caption="Photograph" className="relative min-h-0 min-w-0 flex-1 bg-[#c3b9ab]">
           {!url && <DropZone onFile={onFile} />}
           {url && pixels && (
             <PhotoStage
@@ -400,7 +400,7 @@ export function CaptureWizard() {
           )}
         </HudFrame>
 
-        <aside className="flex w-[352px] shrink-0 flex-col gap-2 border-l border-[color:var(--hairline)] p-2">
+        <aside className="flex w-[352px] shrink-0 flex-col gap-2 border-l border-[color:var(--hairline)] p-2 max-md:h-[min(52vh,440px)] max-md:w-full max-md:border-l-0 max-md:border-t">
           {step === 'photo' && <PhotoStep onFile={onFile} />}
 
           {step === 'calibrate' && (
@@ -833,7 +833,7 @@ function PhotoStage({
 
       {step === 'objects' && (
         <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-ink-900/85 px-2.5 py-1.5 text-[11.5px] text-ink-400">
-          Drag a box around each piece. The thick bottom edge is the floor line — that is what gets measured, so keep it on the ground.
+          Drag a box around each piece. The thick bottom edge is the floor line, and that is what gets measured, so keep it on the ground.
         </div>
       )}
     </div>
@@ -860,7 +860,7 @@ function DropZone({ onFile }: { onFile: (f: File) => void | Promise<void> }) {
         if (f) void onFile(f);
       }}
       className={cn(
-        'absolute inset-8 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-colors',
+        'absolute inset-4 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-colors sm:inset-8',
         over ? 'border-brass-400 bg-brass-500/5' : 'border-[color:var(--hairline)] hover:border-ink-500',
       )}
     >
@@ -876,9 +876,9 @@ function DropZone({ onFile }: { onFile: (f: File) => void | Promise<void> }) {
       <Upload size={30} className="text-brass-500" />
       <div className="text-center">
         <div className="text-[14px] text-ink-200">Drop a photograph of the room</div>
-        <p className="mt-1 max-w-sm text-[12.5px] leading-relaxed text-ink-500">
+        <p className="mt-1 hidden max-w-sm text-[12.5px] leading-relaxed text-ink-500 md:block">
           One wide shot works best. Include a corner where two walls meet the floor, keep the camera
-          roughly upright, and try not to crop the bottom of the furniture — the floor line is what
+          roughly upright, and try not to crop the bottom of the furniture. The floor line is what
           gets measured.
         </p>
       </div>
@@ -1261,7 +1261,7 @@ function ObjectsStep({
                     <span className="tabular block text-[10.5px] text-ink-500">
                       {info
                         ? `${info.size.x.toFixed(2)} × ${info.size.z.toFixed(2)} m · ${Math.round(info.confidence * 100)}%`
-                        : 'not measurable — bottom edge is above the horizon'}
+                        : 'not measurable: bottom edge is above the horizon'}
                     </span>
                   </span>
                 </button>
@@ -1317,7 +1317,7 @@ function SaveStep({
           <div className="flex justify-between">
             <span className="text-ink-500">Room</span>
             <span className="text-ink-100">
-              {fit ? `${formatLength(fit.width)} × ${formatLength(fit.depth)}` : '—'}
+              {fit ? `${formatLength(fit.width)} × ${formatLength(fit.depth)}` : '-'}
             </span>
           </div>
           <div className="flex justify-between">

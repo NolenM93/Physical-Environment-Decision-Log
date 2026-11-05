@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, type ThreeEvent, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Line, OrbitControls, Text } from '@react-three/drei';
+import { ContactShadows, Line, OrbitControls, Text } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { type Vec2, v2 } from '@/lib/geometry/vec';
@@ -519,9 +519,6 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
         shadow-camera-top={10}
         shadow-camera-bottom={-10}
       />
-      <Suspense fallback={null}>
-        <Environment preset="apartment" environmentIntensity={0.35} />
-      </Suspense>
 
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -537,10 +534,10 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
       <ClearanceOverlay
         grid={evaluation.grid}
         reachable={evaluation.reachableMask}
-        showClearance={!quiet && overlays.clearance}
-        showCirculation={!quiet && overlays.circulation}
+        showClearance={overlays.clearance}
+        showCirculation={overlays.circulation}
       />
-      {!quiet && overlays.sunlight && <SunOverlay patches={evaluation.sunPatches} />}
+      {overlays.sunlight && <SunOverlay patches={evaluation.sunPatches} />}
       {overlays.doorSwings && <DoorSwings features={features} />}
       {overlays.ghost && ghostLayout && <GhostLayer layout={ghostLayout} inventory={inventory} />}
 
@@ -550,7 +547,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
           resolved={r}
           selected={selection.includes(r.id)}
           hovered={hovered === r.id}
-          hasProblem={!quiet && problemIds.has(r.id)}
+          hasProblem={problemIds.has(r.id)}
           dragging={draggingId === r.id}
           onPointerDown={onPointerDown}
           onHover={setHovered}
@@ -558,7 +555,7 @@ function SceneContents({ room, features, evaluation, ghostLayout, inventory, qui
         />
       ))}
 
-      {!quiet && overlays.findings && <FindingPins findings={evaluation.findings} />}
+      {overlays.findings && <FindingPins findings={evaluation.findings} />}
 
       {overlays.measurements && selectedResolved && !draggingId && (
         <Dimensions
@@ -614,6 +611,7 @@ export function Scene3D(props: SceneProps) {
         gl.toneMappingExposure = 1.2;
       }}
       className="h-full w-full"
+      style={{ width: '100%', height: '100%', display: 'block' }}
     >
       <color attach="background" args={['#c3b9ab']} />
       <fog attach="fog" args={['#c3b9ab', 22, 52]} />
